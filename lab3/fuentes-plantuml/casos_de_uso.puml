@@ -1,0 +1,40 @@
+@startuml
+left to right direction
+actor "Operario" as OP
+actor "Encargado de almacén" as AL
+actor "Esp. de RRHH" as RH
+actor "Jefe de producción" as JP
+actor "Coord. de exportaciones" as EX
+actor "Gerencia general" as GE
+actor "SENASA / SUNAT" as SS
+rectangle "Sistema Integrado de Trazabilidad - AgroVerde S.A.C." {
+  usecase "Autenticar usuario (RNF01)" as AUTH
+  usecase "CU01 Registrar cierre de lote" as CU01
+  usecase "CU02 Registrar lote offline y sincronizar" as CU02
+  usecase "CU03 Consultar trazabilidad" as CU03
+  usecase "CU04 Registrar ingreso y stock" as CU04
+  usecase "CU05 Conciliar stock y pedidos" as CU05
+  usecase "CU05a Registrar diferencia" as CU05a
+  usecase "CU06 Gestionar datos de trabajadores" as CU06
+  usecase "CU07 Generar documentos de exportación" as CU07
+  usecase "CU08 Generar reportes de trazabilidad" as CU08
+  usecase "CU09 Registrar agua y mermas" as CU09
+}
+OP --> CU01
+OP --> CU02
+AL --> CU02
+AL --> CU04
+AL --> CU05
+RH --> CU06
+JP --> CU01
+JP --> CU03
+EX --> CU05
+EX --> CU07
+GE --> CU08
+GE --> CU09
+SS --> CU07
+SS --> CU08
+CU01 ..> AUTH : <<include>>
+CU02 .up.> CU01 : <<extend>>\n(sin red)
+CU05a .up.> CU05 : <<extend>>\n(hay diferencia)
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+|Operario|
+start
+:Capturar datos del lote;
+|Sistema|
+:Detectar falta de red e intentar guardar en equipo;
+if (¿Se guardó en el equipo?) then (No)
+  |Operario|
+  :Anotar en ficha de papel (RN05);
+  :Entregar ficha al encargado de almacén;
+else (Sí)
+  |Sistema|
+  :Marcar registro como Pendiente;
+endif
+|Encargado de almacén|
+:Recibir y validar datos del registro;
+if (¿Datos completos y correctos?) then (No)
+  |Sistema|
+  :Notificar observación (sigue Pendiente);
+  stop
+else (Sí)
+endif
+|Encargado de almacén|
+:Sincronizar registro con el servidor (RN06);
+if (¿Duplicado o diferencia de cantidad?) then (Sí)
+  |Sistema|
+  :Marcar En conciliación y registrar diferencia;
+  stop
+else (No)
+endif
+:Marcar trazabilidad completa (Sincronizado);
+stop
+@enduml

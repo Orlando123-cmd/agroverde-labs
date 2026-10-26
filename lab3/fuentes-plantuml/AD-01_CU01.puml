@@ -1,0 +1,34 @@
+@startuml
+|Operario / Jefe de producción|
+start
+:Iniciar sesión;
+|Sistema|
+:Validar credenciales y rol (RN04);
+if (¿Acceso válido?) then (No)
+  :Mostrar error de acceso;
+  stop
+else (Sí)
+endif
+|Operario / Jefe de producción|
+repeat
+  :Elegir línea e ingresar fecha, turno y cantidad;
+  |Sistema|
+  :Validar campos y cantidad (RN01, RN03);
+  backward :Mostrar mensaje de error;
+repeat while (¿Datos válidos?) is (No) not (Sí)
+if (¿Hay conexión de red?) then (No)
+  :Derivar a CU02 (registro offline);
+  stop
+else (Sí)
+endif
+:Generar código de lote único (RN02);
+if (¿Código duplicado?) then (Sí)
+  :Rechazar y notificar duplicado;
+  stop
+else (No)
+endif
+:Guardar lote y registrar auditoría;
+|Operario / Jefe de producción|
+:Ver confirmación con código de lote;
+stop
+@enduml

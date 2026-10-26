@@ -1,0 +1,21 @@
+@startuml
+|Almacén / Exportaciones|
+start
+:Consultar stock y seleccionar pedido;
+|Sistema|
+:Calcular disponible vs. comprometido (RN08);
+if (¿Disponible >= comprometido?) then (Sí)
+  :Mostrar estado Confirmado;
+else (No)
+  :Mostrar estado En conciliación;
+  |Almacén / Exportaciones|
+  :Revisar diferencia con stock físico;
+  if (¿Coincide con el stock físico?) then (No)
+    :Registrar diferencia y su motivo (CU05a);
+  else (Sí)
+  endif
+endif
+|Sistema|
+:Registrar conciliación y actualizar estado (RN09);
+stop
+@enduml
