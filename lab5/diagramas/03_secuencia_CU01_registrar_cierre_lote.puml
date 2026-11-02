@@ -1,0 +1,38 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam sequenceMessageAlign center
+actor Operario
+participant ":GestorLotes" as GL
+participant ":Usuario" as US
+participant ":LoteProduccion" as LP
+participant ":RegistroPendiente" as RP
+participant ":RegistroAuditoria" as RA
+Operario -> GL : registrarCierre(linea, fecha, cantidadKg, turno)
+GL -> US : tienePermiso("REGISTRAR_LOTE")
+alt sin permiso
+  US --> GL : false
+  GL -> RA : registrar("acceso denegado")
+  GL --> Operario : mensaje de error
+else con permiso
+  US --> GL : true
+  GL -> LP : validar()
+  alt datos incompletos / cantidad no válida / lote duplicado
+    LP --> GL : false
+    GL --> Operario : mensaje de error
+  else datos válidos
+    LP --> GL : true
+    alt hay cobertura de red
+      GL -> LP : generarCodigo()
+      GL -> LP : registrarCierre()
+      LP --> GL : codigoLote
+      GL -> RA : registrar("cierre de lote")
+      GL --> Operario : confirmación y código
+    else sin cobertura (continúa en CU02)
+      GL -> RP : guardarLocal()
+      RP --> GL : estadoSync = PENDIENTE
+      GL --> Operario : lote pendiente de sincronización
+    end
+  end
+end
+@enduml

@@ -1,0 +1,238 @@
+@startuml
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 11
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #333333
+skinparam packageBorderColor #777777
+skinparam ArrowColor #333333
+skinparam roundCorner 4
+hide circle
+hide empty members
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam linetype ortho
+class LineaProduccion #E8F0E3 {
+  -idLinea: String
+  -producto: String
+  -nombre: String
+  --
+  +obtenerLotesDelTurno(turno): List
+}
+class LoteProduccion #E8F0E3 {
+  -codigoLote: String
+  -fechaCierre: Date
+  -cantidadKg: Double
+  -turno: String
+  -estado: EstadoLote
+  -origenRegistro: String
+  --
+  +registrarCierre()
+  +validar(): Boolean
+  +generarCodigo(): String
+  +cambiarEstado(nuevo: EstadoLote)
+  +consultarTrazabilidad(): String
+}
+class RegistroPendiente #E8F0E3 {
+  -idPendiente: String
+  -fechaHoraCaptura: DateTime
+  -estadoSync: EstadoSync
+  -datosFicha: String
+  -codigoProvisional: String
+  -idEquipo: String
+  --
+  +guardarLocal()
+  +detectarDuplicado(): Boolean
+  +marcarSincronizado()
+}
+class ConsumoAmbiental #E8F0E3 {
+  -aguaLitros: Double
+  -mermaKg: Double
+  --
+  +registrar()
+}
+class GestorLotes <<control>> #E8F0E3 {
+  +registrarCierre(linea, fecha, cantidadKg, turno)
+  +registrarPendiente()
+}
+class GestorSincronizacion <<control>> #E8F0E3 {
+  +sincronizarPendientes()
+  +resolverDuplicado(idPendiente)
+}
+class MovimientoAlmacen #FDEBDD {
+  -idMovimiento: String
+  -tipo: String
+  -cantidadKg: Double
+  -fechaHora: DateTime
+  --
+  +registrarIngreso()
+}
+class StockAlmacen #FDEBDD {
+  -producto: String
+  -cantidadConfirmadaKg: Double
+  -cantidadEnConciliacionKg: Double
+  -fechaUltimaSync: DateTime
+  --
+  +actualizar(delta: Double)
+  +calcularDisponible(): Double
+}
+class Cliente #F9E6EC {
+  -razonSocial: String
+  -pais: String
+}
+class PedidoExportacion #F9E6EC {
+  -codigoPedido: String
+  -cantidadComprometidaKg: Double
+  -estado: String
+  -fechaPedido: Date
+  --
+  +obtenerComprometidoKg(): Double
+  +comprometerStock()
+}
+class DocumentoExportacion #F9E6EC {
+  -tipo: String
+  -numero: String
+  -fechaEmision: Date
+  --
+  +generar()
+}
+class Conciliacion #F9E6EC {
+  -idConciliacion: String
+  -stockSistemaKg: Double
+  -stockFisicoKg: Double
+  -diferenciaKg: Double
+  -estado: EstadoConciliacion
+  -fechaHora: DateTime
+  -motivo: String
+  -idUsuario: String
+  --
+  +comparar(disponibleKg, comprometidoKg)
+  +registrarDiferencia(fisicoKg, motivo)
+  +cerrar()
+}
+class GestorConciliacion <<control>> #F9E6EC {
+  +conciliar(codigoPedido)
+  +registrarDiferencia(fisicoKg, motivo)
+}
+class Trabajador #EFE7F7 {
+  -dni: String
+  -nombres: String
+  -telefono: String
+  -correo: String
+  -direccion: String
+  -regimenPension: String
+  --
+  +actualizarDatos()
+}
+class LegajoPersonal #EFE7F7 {
+  -situacionFamiliar: String
+  -documentos: String
+  --
+  +consultar()
+}
+abstract class Usuario #E9EEF8 {
+  -idUsuario: String
+  -nombreUsuario: String
+  -contrasenaHash: String
+  -activo: Boolean
+  --
+  +autenticar(clave): Boolean
+  +tienePermiso(accion): Boolean
+}
+class Operario #E9EEF8 {
+  -lineaAsignada: String
+}
+class JefeProduccion #E9EEF8 {
+  +validarCierre(codigoLote)
+}
+class EncargadoAlmacen #E9EEF8 {
+  +sincronizarPendientes()
+}
+class CoordinadorExportaciones #E9EEF8 {
+  +consultarStockDisponible(): Double
+}
+class EspecialistaRRHH #E9EEF8 {
+  +gestionarLegajo(dni)
+}
+class Gerencia #E9EEF8 {
+  +solicitarReporte(filtros)
+}
+class RegistroAuditoria #E9EEF8 {
+  -fechaHora: DateTime
+  -accion: String
+  -resultado: String
+  --
+  +registrar()
+}
+class ReporteTrazabilidad #EEEEEE {
+  -filtros: String
+  -fechaGeneracion: DateTime
+  --
+  +generar()
+}
+enum EstadoLote #E8F0E3 {
+  PENDIENTE_SINCRONIZACION
+  REGISTRADO
+  VALIDADO
+  EN_ALMACEN
+  EN_CONCILIACION
+  DISPONIBLE
+  COMPROMETIDO
+  DESPACHADO
+}
+enum EstadoSync #E8F0E3 {
+  PENDIENTE
+  SINCRONIZADO
+  EN_CONCILIACION
+}
+enum EstadoConciliacion #F9E6EC {
+  CONFIRMADO
+  EN_CONCILIACION
+}
+GestorConciliacion ..> Conciliacion
+GestorConciliacion ..> PedidoExportacion
+GestorConciliacion ..> StockAlmacen
+GestorConciliacion ..> RegistroAuditoria
+Conciliacion "0..*" --> "1" PedidoExportacion : concilia
+Conciliacion ..> StockAlmacen : compara con
+Cliente "1" --> "0..*" PedidoExportacion : solicita
+PedidoExportacion "1" *-- "0..*" DocumentoExportacion : genera
+DocumentoExportacion "0..*" --> "1..*" LoteProduccion : ampara
+GestorLotes ..> RegistroPendiente
+GestorLotes ..> LoteProduccion
+GestorLotes ..> Usuario
+GestorLotes ..> RegistroAuditoria
+GestorSincronizacion ..> RegistroPendiente
+GestorSincronizacion ..> LoteProduccion
+GestorSincronizacion ..> RegistroAuditoria
+RegistroPendiente ..> LoteProduccion : origina al sincronizar
+ReporteTrazabilidad ..> LoteProduccion : consulta
+ReporteTrazabilidad ..> StockAlmacen : consulta
+LineaProduccion "1" --> "0..*" LoteProduccion : produce
+LoteProduccion "0..*" --> "1" Operario : cerrado por
+LoteProduccion "0..*" --> "0..1" JefeProduccion : validado por
+Operario --|> Usuario
+JefeProduccion --|> Usuario
+Gerencia --|> Usuario
+EncargadoAlmacen --|> Usuario
+CoordinadorExportaciones --|> Usuario
+EspecialistaRRHH --|> Usuario
+Usuario "1" --> "0..*" RegistroAuditoria : genera
+LegajoPersonal ..> RegistroAuditoria : audita el acceso
+Trabajador "1" *-- "1" LegajoPersonal : posee
+MovimientoAlmacen "0..*" --> "1" LoteProduccion : ingresa
+MovimientoAlmacen "0..*" --> "1" StockAlmacen : actualiza
+LoteProduccion "1" *-- "0..1" ConsumoAmbiental : registra
+LoteProduccion ..> EstadoLote
+RegistroPendiente ..> EstadoSync
+Conciliacion ..> EstadoConciliacion
+legend right
+<back:#E8F0E3>   </back> Producción y Trazabilidad
+<back:#FDEBDD>   </back> Almacén
+<back:#F9E6EC>   </back> Exportaciones
+<back:#EFE7F7>   </back> RRHH y Datos Personales
+<back:#E9EEF8>   </back> Seguridad y Auditoría
+<back:#EEEEEE>   </back> Reportes
+endlegend
+@enduml

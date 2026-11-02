@@ -1,0 +1,15 @@
+Requisito,Descripción,CU,HU,Clases
+RF01,Registrar cierre de lote,CU01,HU01,LoteProduccion; LineaProduccion; Operario; JefeProduccion; GestorLotes; RegistroAuditoria
+RF02,Registro offline y sincronización,CU02,"HU02, HU03",RegistroPendiente; LoteProduccion; EncargadoAlmacen; GestorLotes; GestorSincronizacion
+RF03,Consultar estado y ubicación,CU03,HU04,LoteProduccion; MovimientoAlmacen
+RF04,Ingreso a almacén y stock,CU04,HU05,MovimientoAlmacen; StockAlmacen; EncargadoAlmacen
+RF05,Conciliar stock y pedidos,"CU05, CU05a","HU06, HU12",Conciliacion; PedidoExportacion; StockAlmacen; GestorConciliacion; EncargadoAlmacen; CoordinadorExportaciones
+RF06,Datos personales con control de acceso,CU06,HU07,Trabajador; LegajoPersonal; EspecialistaRRHH; RegistroAuditoria
+RF07,Documentación de exportación,CU07,HU08,DocumentoExportacion; PedidoExportacion; Cliente; CoordinadorExportaciones
+RF08,Buscar lote,CU03,HU04,LoteProduccion; LineaProduccion
+RF09,Reportes de trazabilidad,CU08,HU09,ReporteTrazabilidad; LoteProduccion; Gerencia
+RF10,Agua y mermas,CU09,HU10,ConsumoAmbiental; LoteProduccion; JefeProduccion
+RNF01,Autenticación y roles,Autenticar,HU11,Usuario; Operario; JefeProduccion; EncargadoAlmacen; CoordinadorExportaciones; EspecialistaRRHH; Gerencia
+RNF02,Protección de datos personales,CU06,HU07,LegajoPersonal; Trabajador; RegistroAuditoria
+RNF03,Operación offline,CU02,"HU02, HU03",RegistroPendiente; GestorSincronizacion
+RNF04,Interfaz simple,CU01,HU01,

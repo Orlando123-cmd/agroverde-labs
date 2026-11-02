@@ -1,0 +1,20 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam state {
+  BackgroundColor #EEF2FA
+  BorderColor #333333
+}
+[*] --> Registrado : cierre con red (CU01)
+[*] --> PendienteSincronizacion : cierre sin red (CU02)
+PendienteSincronizacion --> PendienteSincronizacion : duplicado detectado /\nficha incompleta
+PendienteSincronizacion --> Registrado : sincronizar() sin duplicado
+Registrado --> Validado : jefe de producción valida cierre
+Validado --> EnAlmacen : registrarIngreso()
+EnAlmacen --> EnConciliacion : diferencia entre stock\nfísico y sistema (CU05a)
+EnAlmacen --> Disponible : stock confirmado
+EnConciliacion --> Disponible : diferencia resuelta
+Disponible --> Comprometido : asignado a pedido de exportación
+Comprometido --> Despachado : documentación emitida y\ncontenedor despachado
+Despachado --> [*]
+@enduml

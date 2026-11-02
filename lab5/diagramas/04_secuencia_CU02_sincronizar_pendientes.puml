@@ -1,0 +1,28 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam sequenceMessageAlign center
+actor "Encargado de almacén" as EA
+participant ":GestorSincronizacion" as GS
+participant ":RegistroPendiente" as RP
+participant ":LoteProduccion" as LP
+participant ":RegistroAuditoria" as RA
+EA -> GS : sincronizarPendientes()
+loop por cada registro con estadoSync = PENDIENTE
+  GS -> RP : detectarDuplicado()
+  alt duplicado o diferencia de cantidad
+    RP --> GS : true
+    GS -> RP : resolverDuplicado(idPendiente)
+    RP --> GS : estadoSync = EN_CONCILIACION
+  else sin duplicado
+    RP --> GS : false
+    GS -> LP : generarCodigo()
+    GS -> LP : registrarCierre()
+    LP --> GS : codigoLote
+    GS -> RP : marcarSincronizado()
+    RP --> GS : estadoSync = SINCRONIZADO
+  end
+  GS -> RA : registrar("sincronización")
+end
+GS --> EA : resumen (sincronizados / en conciliación)
+@enduml

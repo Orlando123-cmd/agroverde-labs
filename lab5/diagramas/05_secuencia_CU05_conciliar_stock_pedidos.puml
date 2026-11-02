@@ -1,0 +1,26 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam sequenceMessageAlign center
+actor "Encargado de almacén /\nCoord. de exportaciones" as U
+participant ":GestorConciliacion" as GC
+participant ":PedidoExportacion" as PE
+participant ":StockAlmacen" as SA
+participant ":Conciliacion" as CO
+participant ":RegistroAuditoria" as RA
+U -> GC : conciliar(codigoPedido)
+GC -> PE : obtenerComprometidoKg()
+PE --> GC : comprometidoKg
+GC -> SA : calcularDisponible()
+SA --> GC : disponibleKg
+GC -> CO : comparar(disponibleKg, comprometidoKg)
+alt disponible >= comprometido
+  CO --> GC : estado = CONFIRMADO
+else pedido supera el stock / stock físico distinto
+  CO --> GC : estado = EN_CONCILIACION
+  GC -> CO : registrarDiferencia(fisicoKg, motivo)  <<CU05a>>
+end
+GC -> CO : cerrar()
+GC -> RA : registrar("conciliación", usuario)
+GC --> U : estado del pedido, cantidad disponible y fecha de última sincronización
+@enduml

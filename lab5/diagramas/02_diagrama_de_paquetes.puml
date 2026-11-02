@@ -1,0 +1,59 @@
+@startuml
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 11
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #333333
+skinparam packageBorderColor #777777
+skinparam ArrowColor #333333
+skinparam roundCorner 4
+hide circle
+hide empty members
+skinparam nodesep 50
+skinparam ranksep 60
+package "Producción y Trazabilidad" #E8F0E3 {
+  rectangle LineaProduccion
+  rectangle LoteProduccion
+  rectangle RegistroPendiente
+  rectangle ConsumoAmbiental
+  rectangle GestorLotes
+  rectangle GestorSincronizacion
+}
+package "Almacén" #FDEBDD {
+  rectangle MovimientoAlmacen
+  rectangle StockAlmacen
+}
+package "Exportaciones" #F9E6EC {
+  rectangle Cliente
+  rectangle PedidoExportacion
+  rectangle DocumentoExportacion
+  rectangle Conciliacion
+  rectangle GestorConciliacion
+}
+package "RRHH y Datos Personales" #EFE7F7 {
+  rectangle Trabajador
+  rectangle LegajoPersonal
+}
+package "Seguridad y Auditoría" #E9EEF8 {
+  rectangle Usuario
+  rectangle Operario
+  rectangle JefeProduccion
+  rectangle EncargadoAlmacen
+  rectangle CoordinadorExportaciones
+  rectangle EspecialistaRRHH
+  rectangle Gerencia
+  rectangle RegistroAuditoria
+}
+package "Reportes" #EEEEEE {
+  rectangle ReporteTrazabilidad
+}
+"Exportaciones" ..> "Almacén" : <<use>>
+"Exportaciones" ..> "Seguridad y Auditoría" : <<use>>
+"Exportaciones" ..> "Producción y Trazabilidad" : <<use>>
+"Producción y Trazabilidad" ..> "Seguridad y Auditoría" : <<use>>
+"Reportes" ..> "Producción y Trazabilidad" : <<use>>
+"Reportes" ..> "Almacén" : <<use>>
+"RRHH y Datos Personales" ..> "Seguridad y Auditoría" : <<use>>
+"Almacén" ..> "Producción y Trazabilidad" : <<use>>
+@enduml
