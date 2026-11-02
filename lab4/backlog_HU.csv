@@ -1,0 +1,13 @@
+ID,Historia,RF/RNF,CU,WF,Puntos,Depende de,VN,UT,RR,WSJF,MoSCoW,Sprint,Responsable
+HU11,"Como usuario del sistema, quiero ingresar con mi usuario y que mis permisos dependan de mi rol, para proteger la información de cada área.",RNF01,Autenticar,WF-00,3,—,8,8,8,8.0,Must,1,Pablo
+HU02,"Como operario, quiero registrar un lote cuando no haya red, para no detener el proceso productivo.","RF02, RNF03",CU02,WF-02,5,—,13,13,8,6.8,Must,1,David
+HU01,"Como operario, quiero registrar el cierre de un lote con línea, fecha, turno y cantidad, para mantener la trazabilidad.","RF01, RNF04",CU01,WF-01,5,—,13,8,5,5.2,Must,1,Orlando
+HU05,"Como encargado de almacén, quiero registrar el ingreso de un lote y actualizar el stock, para conocer las existencias reales.",RF04,CU04,—,5,HU01,13,8,5,5.2,Must,2,Dayron
+HU12,"Como encargado de almacén, quiero registrar la diferencia entre el stock del sistema y el stock físico con su motivo, para dejar constancia y corregir la conciliación.",RF05,CU05a,WF-04,3,HU06,5,5,5,5.0,Must,2,David
+HU03,"Como encargado de almacén, quiero sincronizar los registros pendientes, para incorporar los lotes al sistema sin duplicarlos.",RF02,CU02,WF-02,5,HU02,8,8,8,4.8,Must,1,Pablo
+HU06,"Como coordinador de exportaciones, quiero conciliar el stock con los pedidos comprometidos, para evitar incumplimientos.",RF05,CU05,WF-03,8,HU05,13,8,13,4.25,Must,2,David
+HU07,"Como especialista de RRHH, quiero gestionar los datos personales con acceso restringido, para cumplir la Ley N.° 29733.","RF06, RNF02",CU06,—,8,HU11,8,13,13,4.25,Must,3,Pablo
+HU04,"Como jefe de producción, quiero consultar el estado y la ubicación de un lote, para verificar su recorrido.","RF03, RF08",CU03,—,3,HU01,5,3,2,3.33,Should,3,Dayron
+HU08,"Como coordinador de exportaciones, quiero generar factura y packing list asociados al lote, para preparar el despacho.",RF07,CU07,—,5,HU05,5,5,3,2.6,Should,3,Orlando
+HU09,"Como gerencia, quiero obtener reportes de trazabilidad, para supervisar la operación y atender requerimientos documentarios.",RF09,CU08,—,5,HU01,5,2,2,1.8,Could,—,Dayron
+HU10,"Como jefe de producción, quiero registrar el agua consumida y las mermas por lote, para controlar el impacto operativo y ambiental.",RF10,CU09,—,3,HU01,2,1,2,1.67,Could,—,Orlando

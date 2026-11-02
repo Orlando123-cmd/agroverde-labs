@@ -1,0 +1,16 @@
+Tarea,HU,Descripción,Responsable,Horas
+T01,HU11,Diseñar el modelo de usuarios y roles,Dayron,4
+T02,HU11,Implementar el ingreso y el control por rol (WF-00),David,6
+T03,HU11,Pruebas de acceso (escenarios HU11),Dayron,3
+T04,HU01,Formulario Cerrar lote (WF-01),Orlando,6
+T05,HU01,Validaciones RN01–RN03,Pablo,5
+T06,HU01,Generación de código de lote único (RN02),Dayron,5
+T07,HU01,Pruebas de escenarios HU01,Orlando,4
+T08,HU02,Almacenamiento local y estado Pendiente (RN05),David,8
+T09,HU02,Pantalla Sin conexión (WF-02),Orlando,6
+T10,HU02,Contingencia con ficha de papel,Dayron,4
+T11,HU02,Pruebas de escenarios HU02,Pablo,4
+T12,HU03,Servicio de sincronización idempotente (RN06),Pablo,10
+T13,HU03,Detección de duplicado o diferencia → En conciliación,David,6
+T14,HU03,Acción Sincronizar en la interfaz,Orlando,5
+T15,HU03,Pruebas de escenarios HU03,Dayron,5
