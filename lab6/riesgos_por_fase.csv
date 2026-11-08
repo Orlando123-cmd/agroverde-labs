@@ -1,0 +1,11 @@
+﻿ID,Fase,Categoría,Riesgo,Probabilidad,Impacto,Mitigación incorporada,Iteración,Responsable
+R1,Inicio,Requisitos,Alcance difuso: cuatro áreas con prioridades enfrentadas,Media,Alta,Visión v1 con alcance dentro/fuera y criterios de éxito medibles; conflictos resueltos con matriz de decisión,I-1,Orlando
+R2,Inicio,Equipo,Un solo representante de la gerencia como fuente de requisitos,Media,Media,Reunión 2 con ≥ 2 áreas; registro de cada decisión en acta,I-1/E-2,Pablo
+R3,Elaboración,Requisitos,Requisitos ambiguos o sin criterio verificable,Media,Alta,"Checklist de calidad (completitud, verificabilidad, trazabilidad) en SRS",E-1,David
+R4,Elaboración,Técnico,Diseño que ignora la conectividad limitada,Alta,Alta,Excepción offline modelada en AD-02 y HU02/HU03 antes de pasar a construcción,E-1,David
+R5,Elaboración,Técnico,Modelo de clases incoherente con secuencias y paquetes,Alta,Media,Contraste secuencia–clases y refactor R01–R10 (Lab. 5); verificación de paquetes sin ciclos,E-2,Dayron
+R6,Elaboración,Requisitos,RNF sin cobertura en artefactos (p. ej. RNF05),Alta,Media,Checklist de coherencia con verificación de IDs; ver hallazgo H1,E-2,Dayron
+R7,Construcción,Equipo,Carga desigual: 81 h de tareas con capacidad de 22 h por integrante,Media,Media,WIP limitado en Kanban; reparto del Lab. 4; revisión de capacidad por sprint,C-1/C-2,Orlando
+R8,Construcción,Técnico,Exposición de datos personales (RNF02) durante pruebas,Baja,Alta,Datos de prueba ficticios; acceso por rol desde HU11 antes de HU07,C-2,Pablo
+R9,Transición,Requisitos,Cambios solicitados en la Reunión 3 sin análisis de impacto,Media,Alta,Solicitud de Cambio con matriz de impacto y versión de línea base,T-1,Orlando
+R10,Transición,Equipo,Integrantes sin dominio de todo el expediente para la sustentación,Media,Alta,Ensayo de sustentación con preguntas cruzadas; matriz de trazabilidad como guion,T-1,Todo el equipo

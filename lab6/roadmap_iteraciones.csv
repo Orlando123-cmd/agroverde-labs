@@ -1,0 +1,7 @@
+﻿Fase,Iteración,Hito,Entregables,Responsables,Semanas (plan),Estado,Evidencia,Riesgos
+Inicio,Iter. 1,I-1,"Ficha de la organización, Reunión 1, Visión v1, restricciones, lista de actores","Orlando, Pablo",Plan: S1–S4,Entregado (Reunión 1: 22/08/2026),Vision v1; RF/RNF preliminares,"R1, R2"
+Elaboración,Iter. 1,E-1,"SRS (RF01–RF10, RNF01–RNF05), matriz de prioridad, CUN/CUS, especificaciones CU01/CU02/CU05, wireframes","David, Dayron",Plan: S5–S7,Entregado (Labs 2–3),"Lab 2, Lab 3","R3, R4"
+Elaboración,Iter. 1,E-2,"HU01–HU12, Gherkin, WSJF/MoSCoW, plan de sprints, modelo de clases v0.5, secuencias, estados, paquetes","Dayron, Pablo",Plan: S8–S10,Entregado (Labs 4–5); Reunión 2 pendiente,"Lab 4, Lab 5","R5, R6"
+Construcción,Iter. 2,C-1,"Sprints 1–2: HU01, HU02, HU03, HU11 (núcleo de trazabilidad offline y seguridad)","Orlando, David",Plan: S11–S12,Planificado,Plan de sprints (Lab 4),R7
+Construcción,Iter. 2,C-2,"Sprints 3–4: HU05, HU06, HU12, HU07 (stock, conciliación, datos personales)","Pablo, Dayron",Plan: S13–S14,Planificado,Plan de sprints (Lab 4),"R7, R8"
+Transición,Iter. 3,T-1,"Reunión 3, Solicitud de Cambio, matriz de trazabilidad integral, expediente y sustentación",Todo el equipo,Plan: S15–S16,Planificado,Expediente EF,"R9, R10"

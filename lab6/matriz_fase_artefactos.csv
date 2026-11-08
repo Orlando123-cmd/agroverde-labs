@@ -1,0 +1,17 @@
+﻿Artefacto,ID,Inicio,Elaboración,Construcción,Transición,Estado
+Documento de Visión,VIS-01,●,○,○,○,v1 (este laboratorio)
+"Ficha, acta Reunión 1, actores y restricciones",ACT-01,●,,,,Entregado
+"SRS breve (RF/RNF, MoSCoW)","RF01–RF10, RNF01–RNF05",○,●,○,○,Entregado (Lab. 2)
+Diagrama de casos de uso (CUN/CUS),EV-01 Lab 3,,●,○,,Entregado (Lab. 3)
+"Especificación de CU (CU01, CU02, CU05)","CU01, CU02, CU05",,●,○,,Entregado (Lab. 3)
+Diagramas de actividad (flujo y excepciones),"AD-01, AD-02, AD-03",○,●,○,,Entregado (Lab. 3)
+Wireframes y navegación,WF-00 a WF-04,,●,○,,Entregado (Lab. 3)
+Historias de usuario y Gherkin,HU01–HU12,,●,●,○,Entregado (Lab. 4)
+"Backlog, WSJF, plan de sprints",BL-01,,○,●,,Entregado (Lab. 4)
+Diagrama de clases de análisis,EV-01 Lab 5,,●,○,,v0.5 (Lab. 5)
+"Diagramas de secuencia (CU01, CU02, CU05)",SEQ-01 a SEQ-03,,●,○,,Entregado (Lab. 5)
+Diagrama de estados (LoteProduccion),STM-01,,●,○,,Entregado (Lab. 5)
+Diagrama de paquetes,PKG-01,,●,○,,Entregado (Lab. 5)
+Matriz de trazabilidad RF → clase,TR-01,,●,○,●,Parcial; integral en T-1
+Registro de riesgos,RSK-01,●,●,●,●,v1 (este laboratorio)
+"Actas de Reunión 2 y 3, Solicitud de Cambio","ACT-02, ACT-03, CR-nn",,○,,●,Pendiente

@@ -1,0 +1,6 @@
+﻿ID,Hallazgo,Severidad,Corrección,Estado
+H1,"RNF05 (tiempo de respuesta) no se traza a ninguna HU, CU ni clase después del Lab. 2",Alta,Agregar criterio de aceptación de tiempo de respuesta a HU04 y HU09 y registrar RNF05 como requisito de prueba en la matriz de trazabilidad,Propuesta de corrección; aplicar en la v1.1 del SRS
+H2,La autenticación no tiene ID de caso de uso,Media,Asignar el alias CU00 «Autenticar usuario» (include de CU01) y usarlo en las matrices,Aplicado en las matrices de este laboratorio
+H3,Estados escritos de dos formas (texto y enumeración),Baja,Declarar la convención: texto de interfaz con mayúscula inicial y enumeraciones del modelo en MAYÚSCULAS_CON_GUION,Aplicado en convenciones.md
+H4,Formato de moneda distinto en documentos,Baja,"Unificar a «S/ 80,000»",Aplicado desde este laboratorio
+H5,Las pruebas Gherkin cubren 8 de 12 HU,Media,"Redactar Gherkin de HU04, HU08, HU09 y HU10 antes de su sprint",Planificado para la Iteración 2

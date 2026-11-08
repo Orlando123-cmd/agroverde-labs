@@ -1,0 +1,11 @@
+﻿ID,Verificación,Resultado observado,Estado,Hallazgo
+C1,"Los 10 RF (RF01–RF10) aparecen en Labs 2, 3, 4 y 5",Verificación automática de IDs,Cumple,—
+C2,Los CU del modelo (Lab. 5) existen en el diagrama de casos de uso (Lab. 3),"10 de 10 (CU01–CU09, CU05a)",Cumple,—
+C3,Las HU usadas en el modelo (Lab. 5) existen en el backlog (Lab. 4),12 de 12 (HU01–HU12),Cumple,—
+C4,Los 5 RNF del SRS (Lab. 2) tienen trazabilidad en artefactos posteriores,RNF05 aparece solo en el Lab. 2; RNF01–RNF04 sí,No cumple,H1
+C5,Todo CU del modelo tiene identificador,La autenticación se nombra «Autenticar» sin ID (Labs 3 y 5),No cumple,H2
+C6,Estados de lote con el mismo nombre en todos los artefactos,Texto: Pendiente / Sincronizado / En conciliación / Confirmado; enumeraciones del modelo en MAYÚSCULAS_CON_GUION,Cumple con convención,H3
+C7,Presupuesto declarado de forma uniforme,"«S/ 80 000» en el Lab. 2 y «S/ 80,000» en el expediente",No cumple,H4
+C8,Paquetes sin dependencias cíclicas y RRHH aislado,Verificado por aserciones al generar el Lab. 5 (10 refactorizaciones),Cumple,—
+C9,Cada excepción del módulo crítico tiene HU y escenario Gherkin,Sin red → HU02; duplicado → HU03; diferencia de cantidad → HU06/HU12; datos incompletos → HU01,Cumple,—
+C10,Cada riesgo tiene mitigación incorporada en el roadmap,10 de 10 riesgos con iteración y responsable,Cumple,—
