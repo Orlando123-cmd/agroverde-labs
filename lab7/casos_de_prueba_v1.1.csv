@@ -1,0 +1,28 @@
+﻿ID,Requisitos,Tipo,Descripción,Origen,Versión
+PR-RF01-01,RF01,Aceptación,"Cierre de lote con línea, fecha, turno y cantidad válidos → se genera código único y confirmación",Lab. 4 · features/HU01 · Cierre de lote exitoso,v1.0
+PR-RF01-02,RF01,Aceptación,Datos inválidos (cantidad ≤ 0 o campo vacío) → se rechaza con mensaje,Lab. 4 · features/HU01 · Rechazo de datos inválidos,v1.0
+PR-RF01-03,RF01,Aceptación,Código de lote duplicado → se rechaza y se notifica,Lab. 4 · features/HU01 · Código de lote duplicado,v1.0
+PR-RF02-01,"RF02, RNF03",Aceptación,Sin cobertura de red → el registro queda Pendiente en el equipo,Lab. 4 · features/HU02 · Registro sin cobertura,v1.0
+PR-RF02-02,"RF02, RNF03",Aceptación,Equipo sin espacio → se usa la ficha de papel (RN05),Lab. 4 · features/HU02 · Equipo no disponible,v1.0
+PR-RF02-03,RF02,Aceptación,Registro sin red → se muestra «Pendiente de sincronización» con fecha y hora de captura (CR-01),Nuevo v1.1 · HU02 (Gherkin v1.1),v1.1
+PR-RF02-04,RF02,Aceptación,Lista de pendientes del encargado de almacén ordenada por fecha y hora de captura (CR-01),Nuevo v1.1 · HU03 (Gherkin v1.1),v1.1
+PR-RF02-05,RF02,Aceptación,Sincronización exitosa → los registros pasan a Sincronizado,Lab. 4 · features/HU03 · Sincronización exitosa,v1.0
+PR-RF02-06,RF02,Aceptación,Reintento sin duplicados,Lab. 4 · features/HU03 · Reintento sin duplicados,v1.0
+PR-RF02-07,RF02,Aceptación,Diferencia de cantidad al sincronizar → En conciliación,Lab. 4 · features/HU03 · Diferencia de cantidad,v1.0
+PR-RF03-01,RF03,Aceptación,Consulta del estado y ubicación de un lote existente,Nuevo v1.1 · HU04 (Gherkin v1.1),v1.1
+PR-RF04-01,RF04,Aceptación,Ingreso de un lote sincronizado actualiza el stock confirmado,Lab. 4 · features/HU05 · Ingreso de un lote sincronizado,v1.0
+PR-RF04-02,RF04,Aceptación,Un lote pendiente no cuenta como stock confirmado,Lab. 4 · features/HU05 · Lote pendiente,v1.0
+PR-RF05-01,RF05,Aceptación,Pedido cubierto por el stock → Confirmado,Lab. 4 · features/HU06 · Pedido cubierto,v1.0
+PR-RF05-02,RF05,Aceptación,Pedido que supera el stock → En conciliación,Lab. 4 · features/HU06 · Pedido que supera el stock,v1.0
+PR-RF05-03,RF05,Aceptación,Diferencia con motivo registrada; sin motivo se rechaza,Lab. 4 · features/HU12 · Diferencia registrada con motivo / sin motivo,v1.0
+PR-RF06-01,"RF06, RNF02",Seguridad,Usuario fuera de RRHH → acceso denegado y registro de auditoría,Lab. 4 · features/HU07 · Acceso denegado,v1.0
+PR-RF06-02,"RF06, RNF02",Seguridad,Gerencia recibe solo reporte agregado sin datos personales,Lab. 4 · features/HU07 · Reporte agregado,v1.0
+PR-RF07-01,RF07,Aceptación,Generar factura y packing list de un lote Disponible; sin lote no se genera,Nuevo v1.1 · caso textual (HU08),v1.1
+PR-RF08-01,RF08,Aceptación,"Búsqueda de lote por código, por línea y por fecha",Nuevo v1.1 · HU04 (Gherkin v1.1),v1.1
+PR-RF09-01,RF09,Aceptación,"Reporte de trazabilidad filtrado por lote, línea, fecha y estado",Nuevo v1.1 · HU09 (Gherkin v1.1),v1.1
+PR-RF10-01,RF10,Aceptación,Registrar agua y merma por lote; valores negativos se rechazan,Nuevo v1.1 · caso textual (HU10),v1.1
+PR-RNF01-01,RNF01,Seguridad,Credenciales válidas ingresan; inválidas se rechazan,Lab. 4 · features/HU11 · Ingreso / Credenciales inválidas,v1.0
+PR-RNF01-02,RNF01,Seguridad,Opción no permitida para el rol,Lab. 4 · features/HU11 · Opción no permitida,v1.0
+PR-RNF04-01,RNF04,Usabilidad,Operarios cierran un lote con WF-01 sin ayuda; criterio propuesto: ≥ 4 de 5 lo logran (a validar),Nuevo v1.1 · caso textual (HU01),v1.1
+PR-RNF05-01,RNF05,No funcional,"Consulta de un lote desde el módulo administrativo responde en ≤ 3 s (umbral propuesto, CR-02)",Nuevo v1.1 · HU04 (Gherkin v1.1),v1.1
+PR-RNF05-02,RNF05,No funcional,"Reporte de trazabilidad responde en ≤ 10 s (umbral propuesto, CR-02)",Nuevo v1.1 · HU09 (Gherkin v1.1),v1.1

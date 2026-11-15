@@ -1,0 +1,7 @@
+﻿ID,Hallazgo,Severidad,Corrección,Estado
+P01,"HU08 y HU10 siguen sin escenarios Gherkin (solo casos textuales PR-RF07-01, PR-RF10-01)",Media,Redactar los features antes de su sprint (Iteración 2); H5 del Lab. 6 queda parcialmente cerrado (10 de 12 HU con Gherkin),Abierto
+P02,Los umbrales de PR-RNF04-01 y PR-RNF05-01/02 son propuestas del equipo,Media,Validar con el representante en la Reunión 3 y medir en el prototipo,Abierto
+P03,El PDF del Lab. 2 conserva el texto v1.0 de RF02 y RNF05,Baja,El texto vigente está en actualizaciones/srs_cambios_v1.1.md; se integra en el SRS del expediente final,Planificado
+P04,WF-02 no muestra aún la etiqueta «Pendiente de sincronización» (CR-01),Baja,Actualizar el wireframe en la herramienta del equipo en la Iteración 2,Abierto
+P05,H1 (RNF05 sin trazabilidad) y H2 (CU00) del Lab. 6,Alta,Cerrados: RNF05 con 2 pruebas y CU00 usado en la matriz,Cerrado
+P06,Formato de moneda (H4 del Lab. 6),Baja,"Mantener «S/ 80,000» al integrar el expediente",Abierto

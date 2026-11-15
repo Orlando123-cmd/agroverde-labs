@@ -1,0 +1,10 @@
+﻿Artefacto,ID,LB-1.0 (v1.0-iter1),LB-1.1 (v1.1),CR
+Documento de Visión,VIS-01,v1,v1,—
+SRS (RF/RNF),"RF01–RF10, RNF01–RNF05",v1.0,v1.1,"CR-01, CR-02"
+Casos de uso (CU02),CU01–CU09,v1.0,v1.1,CR-01
+Historias y Gherkin,HU01–HU12,v1.0 (8 features),v1.1 (10 features),"CR-01, CR-02"
+Modelo de clases,CL01–CL24,v0.5,v0.6,CR-01
+Secuencia CU02,SEQ-02,v1.0,v1.1,CR-01
+Wireframe de registro offline,WF-02,v1.0,por actualizar,CR-01
+Casos de prueba,PR-…,v1.0 (17),v1.1 (27),"CR-01, CR-02"
+Matriz de trazabilidad,TR-01,v1.0 (8/15 completos),v1.1 (15/15 completos),"CR-01, CR-02"

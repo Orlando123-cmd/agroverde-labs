@@ -1,0 +1,16 @@
+﻿Req,Descripción,CU,HU,Clases_IDs,Clases,Wireframes,Secuencia,Pruebas,Versión
+RF01,Registrar cierre de lote,CU01,HU01,"CL01, CL02, CL03, CL04, CL05, CL06","LoteProduccion, LineaProduccion, Operario, JefeProduccion, GestorLotes, RegistroAuditoria",,SEQ-01,"PR-RF01-01, PR-RF01-02, PR-RF01-03",v1.1
+RF02,Registro offline y sincronización,CU02,"HU02, HU03","CL07, CL01, CL08, CL05, CL09","RegistroPendiente, LoteProduccion, EncargadoAlmacen, GestorLotes, GestorSincronizacion",,SEQ-02,"PR-RF02-01, PR-RF02-02, PR-RF02-03, PR-RF02-04, PR-RF02-05, PR-RF02-06, PR-RF02-07",v1.1
+RF03,Consultar estado y ubicación,CU03,HU04,"CL01, CL10","LoteProduccion, MovimientoAlmacen",,—,PR-RF03-01,v1.1
+RF04,Ingreso a almacén y stock,CU04,HU05,"CL10, CL11, CL08","MovimientoAlmacen, StockAlmacen, EncargadoAlmacen",,—,"PR-RF04-01, PR-RF04-02",v1.1
+RF05,Conciliar stock y pedidos,"CU05, CU05a","HU06, HU12","CL12, CL13, CL11, CL14, CL08, CL15","Conciliacion, PedidoExportacion, StockAlmacen, GestorConciliacion, EncargadoAlmacen, CoordinadorExportaciones",,SEQ-03,"PR-RF05-01, PR-RF05-02, PR-RF05-03",v1.1
+RF06,Datos personales con control de acceso,CU06,HU07,"CL16, CL17, CL18, CL06","Trabajador, LegajoPersonal, EspecialistaRRHH, RegistroAuditoria",,—,"PR-RF06-01, PR-RF06-02",v1.1
+RF07,Documentación de exportación,CU07,HU08,"CL19, CL13, CL20, CL15","DocumentoExportacion, PedidoExportacion, Cliente, CoordinadorExportaciones",,—,PR-RF07-01,v1.1
+RF08,Buscar lote,CU03,HU04,"CL01, CL02","LoteProduccion, LineaProduccion",,—,PR-RF08-01,v1.1
+RF09,Reportes de trazabilidad,CU08,HU09,"CL21, CL01, CL22","ReporteTrazabilidad, LoteProduccion, Gerencia",,—,PR-RF09-01,v1.1
+RF10,Agua y mermas,CU09,HU10,"CL23, CL01, CL04","ConsumoAmbiental, LoteProduccion, JefeProduccion",,—,PR-RF10-01,v1.1
+RNF01,Autenticación y roles,CU00,HU11,"CL24, CL03, CL04, CL08, CL15, CL18, CL22","Usuario, Operario, JefeProduccion, EncargadoAlmacen, CoordinadorExportaciones, EspecialistaRRHH, Gerencia",,—,"PR-RNF01-01, PR-RNF01-02",v1.1
+RNF02,Protección de datos personales,CU06,HU07,"CL17, CL16, CL06","LegajoPersonal, Trabajador, RegistroAuditoria",,—,"PR-RF06-01, PR-RF06-02",v1.1
+RNF03,Operación offline,CU02,"HU02, HU03","CL07, CL09","RegistroPendiente, GestorSincronizacion",,SEQ-02,"PR-RF02-01, PR-RF02-02",v1.1
+RNF04,Interfaz simple,CU01,HU01,,,"WF-00, WF-01, WF-02, WF-03, WF-04",—,PR-RNF04-01,v1.1
+RNF05,Tiempo de respuesta,"CU03, CU08","HU04, HU09","CL01, CL21","LoteProduccion, ReporteTrazabilidad",,—,"PR-RNF05-01, PR-RNF05-02",v1.1
