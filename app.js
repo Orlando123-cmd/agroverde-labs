@@ -172,14 +172,16 @@ function buscarConcepto(texto){
 function glosarioIA(){
   return CONCEPTOS_AGROVERDE.map(function(c){ return c.titulo+' → '+c.donde; }).join(' | ');
 }
-function textoConcepto(c,accion,yaBoton){
+function textoConcepto(c,accion,yaBoton,conPrefijo){
   const funciones=c.funciones.map(function(f){ return '• '+esc(f); }).join(' ');
   const permitido=!c.modulo||tiene(c.modulo);
   const boton=(!yaBoton&&permitido&&accion)?accion(c.modulo,c.boton||'Abrir módulo'):'';
   const extra=permitido?'':' Lo gestiona '+esc(c.responsable||'otro puesto')+'.';
-  return '<br><br><b>Concepto — '+esc(c.titulo)+':</b> '+esc(c.que)+
+  const punto=c.donde.slice(-1)==='.'?'':'.';
+  const prefijo=conPrefijo===false?'':'<br><br>';
+  return prefijo+'<b>Concepto — '+esc(c.titulo)+':</b> '+esc(c.que)+
     '<br><b>Funciones:</b> '+funciones+
-    '<br><b>Dónde está:</b> '+esc(c.donde)+'.'+extra+(boton?'<br>'+boton:'');
+    '<br><b>Dónde está:</b> '+esc(c.donde)+punto+extra+(boton?'<br>'+boton:'');
 }
 
 let db = null;
@@ -1631,7 +1633,10 @@ function responderAsistente(t,escribir){
     r='No estoy seguro de entender. Puedo ayudarte con registro de lotes, escáner, modo offline, validación, stock, RRHH o trazabilidad. Elige una opción o escribe <b>LOTE-2026-001</b> para consultar un lote. '+accion('cierre','Registrar lote')+' '+accion('offline','Modo offline');
   }
   const concepto=(!codigo&&!/gracias/.test(q))?buscarConcepto(t):null;
-  if(concepto) r+=textoConcepto(concepto,accion,r.indexOf('chat-action')>=0);
+  if(concepto){
+    if(r.indexOf('No estoy seguro de entender')===0) r='';
+    r+=textoConcepto(concepto,accion,r.indexOf('chat-action')>=0,r.length>0);
+  }
   mostrarRespuestaAsistente(r,escribir);
 }
 function mostrarRespuestaAsistente(html,escribir){
