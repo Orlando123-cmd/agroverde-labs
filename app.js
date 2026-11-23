@@ -398,8 +398,8 @@ function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':
 function val(id){ const e=document.getElementById(id); return e ? e.value.trim() : ''; }
 function aud(accion, detalle){ db.auditoria.unshift({fecha:ahora(), usuario:actual?actual.nombre:'Sistema', accion, detalle:detalle||''}); if(db.auditoria.length>300) db.auditoria.pop(); }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.add('hidden'),3500); }
-function abrirModal(html){ document.getElementById('modalBody').innerHTML=html; document.getElementById('modal').classList.remove('hidden'); }
-function cerrarModal(e){ if(e && e.target && e.target.id!=='modal') return; document.getElementById('modal').classList.add('hidden'); }
+function abrirModal(html){ document.getElementById('modalBody').innerHTML=html; document.getElementById('modal').classList.remove('hidden'); document.body.classList.add('modal-abierto'); }
+function cerrarModal(e){ if(e && e.target && e.target.id!=='modal') return; document.getElementById('modal').classList.add('hidden'); document.body.classList.remove('modal-abierto'); }
 function imprimir(){ window.print(); }
 function tiene(m){ return (MODULOS[actual.rol]||[]).includes(m); }
 function listaUsuarios(){ return (db && Array.isArray(db.usuarios) && db.usuarios.length) ? db.usuarios : USUARIOS_SEMILLA; }
@@ -443,6 +443,9 @@ function iniciarSesion(e){
 }
 function cerrarSesion(){
   limpiarTemporizadores(); detenerEscaneo(true); destruirIA();
+  cerrarAyudaModal();
+  document.getElementById('modal').classList.add('hidden');
+  document.body.classList.remove('modal-abierto','asistente-abierto');
   aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null;
   document.getElementById('app').classList.add('hidden');
   document.getElementById('login').classList.remove('hidden');
@@ -1716,12 +1719,14 @@ function abrirAyudaModal(i){
   const modal=document.getElementById('ayudaModal');
   if(!modal) return;
   modal.classList.remove('hidden');
+  document.body.classList.add('ayuda-abierta');
   if(typeof i==='number') mostrarTemaModal(i); else mostrarTemasModal();
 }
 function abrirAyudaRapida(){ abrirAyudaModal(); }
 function cerrarAyudaModal(){
   const modal=document.getElementById('ayudaModal');
   if(modal) modal.classList.add('hidden');
+  document.body.classList.remove('ayuda-abierta');
 }
 function mostrarTemasModal(){
   const titulo=document.getElementById('ayudaModalTitulo');
@@ -1783,6 +1788,7 @@ function toggleAsistente(){
   const panel=document.getElementById('asistentePanel');
   const abrir=panel.classList.contains('hidden');
   panel.classList.toggle('hidden',!abrir);
+  document.body.classList.toggle('asistente-abierto',abrir);
   if(!abrir) cerrarAyudaModal();
   if(abrir){
     ensureAyudaCard();
