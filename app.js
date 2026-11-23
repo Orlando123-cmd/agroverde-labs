@@ -1691,6 +1691,22 @@ function accionModulo(id,label){
   if(!id) return '';
   return '<button class="chat-action" onclick="ir(\''+id+'\');toggleAsistente()">'+esc(label)+' →</button>';
 }
+function scrollQuick(dir){
+  const q=document.getElementById('asistenteQuick');
+  if(!q) return;
+  const paso=Math.max(140,Math.round(q.clientWidth*0.7));
+  if(typeof q.scrollBy==='function') q.scrollBy({left:dir*paso,behavior:'smooth'});
+  else q.scrollLeft+=dir*paso;
+}
+function actualizarFlechasQuick(){
+  const q=document.getElementById('asistenteQuick');
+  const izq=document.getElementById('quickIzq');
+  const der=document.getElementById('quickDer');
+  if(!q||!izq||!der) return;
+  const fin=q.scrollWidth-q.clientWidth;
+  izq.classList.toggle('hidden',q.scrollLeft<=2);
+  der.classList.toggle('hidden',fin<=2||q.scrollLeft>=fin-2);
+}
 function iconoConcepto(c){
   const m=MODULOS_INFO.find(function(x){return x.id===c.modulo;});
   if(m) return m.icono;
@@ -1807,6 +1823,7 @@ function toggleAsistente(){
   if(!abrir) cerrarAyudaModal();
   if(abrir){
     ensureAyudaCard();
+    setTimeout(actualizarFlechasQuick,60);
     verificarIA();
     const chat=document.getElementById('asistenteChat');
     if(!chat.querySelector('.chat-bubble')){
@@ -1978,6 +1995,7 @@ function cerrarPorInactividad(silencioso){
   document.getElementById('asistente').classList.add('hidden');
   document.getElementById('login').classList.remove('hidden');
   document.getElementById('modal').classList.add('hidden');
+  document.body.classList.remove('modal-abierto','ayuda-abierta','asistente-abierto');
   renderUsuariosLogin();
   if(!silencioso) toast('Sesión cerrada por inactividad. Vuelve a ingresar.');
 }
@@ -2003,3 +2021,4 @@ if(window.MutationObserver){
   observadorTablas.observe(document.getElementById('contenido'),{childList:true,subtree:true});
 }
 mejorarTablasMovil();
+setTimeout(actualizarFlechasQuick,100);

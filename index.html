@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>AgroVerde S.A.C. — Sistema de Trazabilidad de Lotes</title>
-<link rel="stylesheet" href="styles.css?v=23">
+<link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
 
@@ -98,12 +98,16 @@
       <button class="asistente-close" onclick="toggleAsistente()" aria-label="Cerrar">✕</button>
     </div>
     <div id="asistenteChat" class="asistente-chat"></div>
-    <div class="asistente-quick">
-      <button onclick="abrirAyudaRapida()">🛟 Ayuda</button>
-      <button onclick="preguntaRapida('¿Cómo registro un lote?')">Registrar lote</button>
-      <button onclick="preguntaRapida('¿Qué hago si no hay señal?')">Sin señal</button>
-      <button onclick="preguntaRapida('¿Quién valida los lotes?')">Validación</button>
-      <button onclick="preguntaRapida('Ver resumen')">Resumen</button>
+    <div class="asistente-quick-wrap">
+      <div id="asistenteQuick" class="asistente-quick" onscroll="actualizarFlechasQuick()">
+        <button onclick="abrirAyudaRapida()">🛟 Ayuda</button>
+        <button onclick="preguntaRapida('¿Cómo registro un lote?')">Registrar lote</button>
+        <button onclick="preguntaRapida('¿Qué hago si no hay señal?')">Sin señal</button>
+        <button onclick="preguntaRapida('¿Quién valida los lotes?')">Validación</button>
+        <button onclick="preguntaRapida('Ver resumen')">Resumen</button>
+      </div>
+      <button type="button" id="quickIzq" class="quick-scroll quick-scroll-izq hidden" onclick="scrollQuick(-1)" aria-label="Ver accesos anteriores">‹</button>
+      <button type="button" id="quickDer" class="quick-scroll quick-scroll-der" onclick="scrollQuick(1)" aria-label="Ver más accesos">›</button>
     </div>
     <form class="asistente-form" onsubmit="enviarAsistente(event)">
       <input id="asistenteInput" autocomplete="off" placeholder="Escribe tu pregunta…" aria-label="Mensaje para el asistente">
@@ -137,11 +141,11 @@
   </div>
 </div>
 
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js?v=23').catch(function () {});
+    navigator.serviceWorker.register('sw.js?v=24').catch(function () {});
   });
 }
 </script>
