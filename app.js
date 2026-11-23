@@ -11,6 +11,13 @@ let timerAviso = null;
 let timerCierre = null;
 let avisoMostrado = false;
 
+// Herramientas sin base de datos: tour guiado, buscador global e instalación PWA
+let tourPasos = [];
+let tourPaso = 0;
+let resultadosBuscar = [];
+let buscarIndice = 0;
+let eventoInstalacion = null;
+
 // Usuarios semilla. La lista editable vive en db.usuarios (gestión desde la app).
 const USUARIOS_SEMILLA = [
   {usuario:'operario1', pass:'op123', nombre:'Pablo Blas', rol:'Operario de producción', linea:'L1', activo:true},
@@ -443,7 +450,7 @@ function iniciarSesion(e){
 }
 function cerrarSesion(){
   limpiarTemporizadores(); detenerEscaneo(true); destruirIA();
-  cerrarAyudaModal();
+  cerrarAyudaModal(); cerrarTour(); cerrarBuscar();
   document.getElementById('modal').classList.add('hidden');
   document.body.classList.remove('modal-abierto','asistente-abierto');
   aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null;
@@ -524,6 +531,8 @@ function renderApp(){
   actualizarCabecera();
   refrescarMenu();
   ir('inicio');
+  actualizarBotonInstalar();
+  setTimeout(maybeIniciarTour, 550);
 }
 function ir(mod){
   if(!tiene(mod)) mod='inicio';
@@ -1989,6 +1998,7 @@ function mostrarAvisoInactividad(){
 function continuarSesion(){ cerrarModal(); registrarActividad(true); toast('Sesión extendida por 10 minutos más.'); }
 function cerrarPorInactividad(silencioso){
   limpiarTemporizadores(); detenerEscaneo(true); destruirIA();
+  cerrarAyudaModal(); cerrarTour(); cerrarBuscar();
   if(actual) aud('Cierre por inactividad', 'Sesión finalizada automáticamente tras 10 min sin actividad');
   db.session=null; guardarDB(); actual=null;
   document.getElementById('app').classList.add('hidden');
@@ -2001,6 +2011,265 @@ function cerrarPorInactividad(silencioso){
 }
 ['click','keydown','touchstart','scroll','mousemove'].forEach(function(ev){
   window.addEventListener(ev, function(){ registrarActividad(false); }, {passive:true});
+});
+
+/* ============================================================
+   Tour guiado — 6 pasos por los módulos que el puesto puede usar.
+   Solo usa localStorage: no necesita base de datos ni API.
+   ============================================================ */
+function tourVisto(){ try{ return localStorage.getItem('agroverde-tour-visto')==='1'; }catch(e){ return false; } }
+function marcarTourVisto(){ try{ localStorage.setItem('agroverde-tour-visto','1'); }catch(e){} }
+function construirPasosTour(){
+  const base=[
+    {modulo:'inicio',icono:'🏠',titulo:'Inicio',texto:'Aquí ves el resumen del día: lotes sin validar, stock disponible y alertas. Empieza siempre por esta pantalla.'},
+    {modulo:'cierre',icono:'📝',titulo:'Registro de cierre',texto:'Captura el lote al terminar el turno: línea, fecha, cantidad y turno. Si no hay señal, queda guardado como pendiente.'},
+    {modulo:'escanear',icono:'📷',titulo:'Escáner de lote',texto:'Lee el código con la cámara o escríbelo a mano. En la computadora puedes elegir la webcam y escanear sin pantalla completa.'},
+    {modulo:'validar',icono:'✅',titulo:'Validación',texto:'El jefe de línea revisa y valida los lotes registrados. Solo entonces se pueden generar documentos de exportación.'},
+    {modulo:'consulta',icono:'🔎',titulo:'Consulta y búsqueda',texto:'Busca un lote por código, línea o fecha. Los resultados se pueden descargar en CSV.'},
+    {modulo:'trazabilidad',icono:'🔗',titulo:'Trazabilidad',texto:'Consulta el historial completo de un lote: registro, validación, ingreso a almacén y movimientos.'}
+  ];
+  return actual?base.filter(function(p){ return tiene(p.modulo); }):base;
+}
+function maybeIniciarTour(){
+  const ov=document.getElementById('tourOverlay');
+  if(ov && !ov.classList.contains('hidden')) return;
+  if(!tourVisto()) iniciarTour(false);
+}
+function iniciarTour(manual){
+  if(!actual) return;
+  tourPasos=construirPasosTour();
+  if(!tourPasos.length) return;
+  if(!manual && tourVisto()) return;
+  tourPaso=0;
+  const ov=document.getElementById('tourOverlay');
+  if(!ov) return;
+  ov.classList.remove('hidden');
+  document.body.classList.add('tour-abierto');
+  ir(tourPasos[0].modulo);
+  requestAnimationFrame(mostrarPasoTour);
+}
+function mostrarPasoTour(){
+  const ov=document.getElementById('tourOverlay');
+  if(!ov || ov.classList.contains('hidden') || !tourPasos.length) return;
+  const p=tourPasos[tourPaso];
+  if(!p) return;
+  const icono=document.getElementById('tourIcono');
+  const titulo=document.getElementById('tourTitulo');
+  const texto=document.getElementById('tourTexto');
+  if(icono) icono.textContent=p.icono;
+  if(titulo) titulo.textContent=p.titulo;
+  if(texto) texto.textContent=p.texto;
+  const paso=document.getElementById('tourPaso');
+  if(paso) paso.textContent='Paso '+(tourPaso+1)+' de '+tourPasos.length;
+  const atras=document.getElementById('tourAtras');
+  if(atras) atras.disabled=tourPaso===0;
+  const sig=document.getElementById('tourSiguiente');
+  if(sig) sig.textContent=tourPaso===tourPasos.length-1?'Terminar ✓':'Siguiente →';
+  document.querySelectorAll('.tour-resaltado').forEach(function(el){ el.classList.remove('tour-resaltado'); });
+  const movil=window.matchMedia && matchMedia('(max-width:600px)').matches;
+  let destino=movil?document.getElementById('contenido'):document.getElementById('nav-'+p.modulo);
+  if(!destino) destino=document.getElementById('contenido');
+  if(destino) destino.classList.add('tour-resaltado');
+  const globo=document.getElementById('tourGlobo');
+  if(!globo) return;
+  globo.classList.toggle('tour-globo-movil',movil);
+  if(movil){ globo.style.top=''; globo.style.left=''; }
+  else {
+    const r=destino?destino.getBoundingClientRect():{left:16,right:16,top:16,bottom:16,height:32};
+    const g=globo.getBoundingClientRect();
+    let left=Math.min(window.innerWidth-g.width-16,r.right+18);
+    if(left<16) left=Math.min(window.innerWidth-g.width-16,r.left-18-g.width);
+    if(left<16) left=16;
+    let top=Math.min(window.innerHeight-g.height-16,Math.max(16,r.top+r.height/2-g.height/2));
+    globo.style.left=left+'px';
+    globo.style.top=top+'px';
+  }
+}
+function pasoTour(delta){
+  if(!tourPasos.length) return;
+  const siguiente=tourPaso+delta;
+  if(siguiente>=tourPasos.length){ cerrarTour(); toast('Recorrido terminado. Ya puedes trabajar.'); return; }
+  if(siguiente<0) return;
+  tourPaso=siguiente;
+  ir(tourPasos[tourPaso].modulo);
+  requestAnimationFrame(mostrarPasoTour);
+}
+function cerrarTour(){
+  const ov=document.getElementById('tourOverlay');
+  const estabaAbierto=ov && !ov.classList.contains('hidden');
+  if(ov) ov.classList.add('hidden');
+  document.querySelectorAll('.tour-resaltado').forEach(function(el){ el.classList.remove('tour-resaltado'); });
+  document.body.classList.remove('tour-abierto');
+  if(estabaAbierto) marcarTourVisto();
+}
+
+/* ============================================================
+   Buscador global (Ctrl+K / ⌘K): módulos, glosario y lotes.
+   Todo se arma en memoria desde MODULOS_INFO, CONCEPTOS y db.
+   ============================================================ */
+function quitarAcentos(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function construirIndiceBuscar(){
+  const out=[];
+  MODULOS_INFO.forEach(function(m){
+    if(actual && !tiene(m.id)) return;
+    out.push({tipo:'Módulo',titulo:m.icono+' '+m.label,detalle:'Abrir el módulo '+m.label,terminos:m.label+' '+m.id,accion:'modulo',id:m.id});
+  });
+  CONCEPTOS_AGROVERDE.forEach(function(c,i){
+    out.push({tipo:'Ayuda',titulo:c.titulo,detalle:c.que,terminos:c.titulo+' '+c.que+' '+c.funciones.join(' ')+' '+c.donde,accion:'concepto',id:i});
+  });
+  (db.lotes||[]).slice().reverse().forEach(function(l){
+    out.push({tipo:'Lote',titulo:l.codigo,detalle:(l.linea||'—')+' · '+(l.fecha||'')+' · '+(l.estado||''),
+      terminos:l.codigo+' '+l.linea+' '+l.fecha+' '+l.estado+' '+(l.ubicacion||''),accion:'lote',id:l.codigo});
+  });
+  return out;
+}
+function abrirBuscar(){
+  const modal=document.getElementById('buscarModal');
+  if(!modal || (actual && document.getElementById('app').classList.contains('hidden'))) return;
+  cerrarAyudaModal();
+  const gen=document.getElementById('modal'); if(gen) gen.classList.add('hidden');
+  document.body.classList.remove('modal-abierto');
+  modal.classList.remove('hidden');
+  document.body.classList.add('buscando');
+  const input=document.getElementById('buscarInput');
+  if(input){ input.value=''; setTimeout(function(){ input.focus(); },40); }
+  renderResultadosBuscar();
+}
+function cerrarBuscar(e){
+  if(e && e.target && e.target.id!=='buscarModal') return;
+  const modal=document.getElementById('buscarModal');
+  if(modal) modal.classList.add('hidden');
+  document.body.classList.remove('buscando');
+}
+function renderResultadosBuscar(){
+  const cont=document.getElementById('buscarResultados');
+  const input=document.getElementById('buscarInput');
+  if(!cont||!input) return;
+  const q=quitarAcentos(input.value.trim());
+  const indice=construirIndiceBuscar();
+  let lista;
+  if(!q) lista=indice.filter(function(r){ return r.tipo==='Módulo'; }).slice(0,8);
+  else{
+    lista=indice.map(function(r){
+      const titulo=quitarAcentos(r.titulo), terminos=quitarAcentos(r.terminos);
+      let pts=0;
+      if(titulo.indexOf(q)===0) pts+=6;
+      else if(titulo.indexOf(q)>=0) pts+=4;
+      if(terminos.indexOf(q)>=0) pts+=1;
+      return {r:r,pts:pts};
+    }).filter(function(x){ return x.pts>0; })
+      .sort(function(a,b){ return b.pts-a.pts; }).slice(0,12)
+      .map(function(x){ return x.r; });
+  }
+  resultadosBuscar=lista;
+  buscarIndice=lista.length?0:-1;
+  cont.innerHTML=lista.length
+    ? lista.map(function(r,i){
+        return '<button type="button" class="buscar-resultado'+(i===0?' seleccionado':'')+'" onmouseenter="seleccionarResultadoBuscar('+i+')" onclick="elegirResultadoBuscar('+i+')">'+
+          '<span class="br-tipo">'+esc(r.tipo)+'</span><b>'+esc(r.titulo)+'</b><small>'+esc(r.detalle)+'</small></button>';
+      }).join('')
+    : '<div class="buscar-vacio">No encontré resultados para «'+esc(input.value)+'». Prueba con “lote”, “cámara” o “stock”.</div>';
+}
+function seleccionarResultadoBuscar(i){
+  buscarIndice=i;
+  document.querySelectorAll('.buscar-resultado').forEach(function(b,j){ b.classList.toggle('seleccionado',j===i); });
+}
+function moverSeleccionBuscar(delta){
+  if(!resultadosBuscar.length) return;
+  buscarIndice=(buscarIndice+delta+resultadosBuscar.length)%resultadosBuscar.length;
+  seleccionarResultadoBuscar(buscarIndice);
+  const el=document.querySelectorAll('.buscar-resultado')[buscarIndice];
+  if(el && typeof el.scrollIntoView==='function') el.scrollIntoView({block:'nearest'});
+}
+function elegirResultadoBuscar(i){
+  const r=resultadosBuscar[i];
+  if(!r) return;
+  cerrarBuscar();
+  if(r.accion==='modulo'){ ir(r.id); return; }
+  if(r.accion==='concepto'){ abrirConceptoDesdeBuscar(r.id); return; }
+  if(r.accion==='lote'){
+    if(!tiene('consulta')) return toast('Tu puesto no tiene acceso a Consulta.');
+    ir('consulta');
+    setTimeout(function(){
+      const campo=document.getElementById('busq');
+      if(campo){ campo.value=r.id; campo.focus(); }
+      const fecha=document.getElementById('busqFecha'); if(fecha) fecha.value='';
+      buscar({preventDefault:function(){}});
+    },60);
+  }
+}
+function abrirAsistenteSinAyuda(){
+  const contenedor=document.getElementById('asistente');
+  const panel=document.getElementById('asistentePanel');
+  if(contenedor) contenedor.classList.remove('hidden');
+  if(panel && panel.classList.contains('hidden')){
+    panel.classList.remove('hidden');
+    document.body.classList.add('asistente-abierto');
+    ensureAyudaCard(); verificarIA();
+    const chat=document.getElementById('asistenteChat');
+    if(chat && !chat.querySelector('.chat-bubble')) mensajeAsistente('¡Hola! Soy el asistente AgroVerde. Escribe tu pregunta o abre 🛟 Ayuda.','bot');
+  }
+  setTimeout(actualizarFlechasQuick,60);
+}
+function abrirConceptoDesdeBuscar(i){
+  const c=CONCEPTOS_AGROVERDE[i];
+  if(!c) return;
+  abrirAsistenteSinAyuda();
+  cerrarAyudaModal();
+  mensajeAsistente('Explícame '+c.titulo,'user');
+  mostrarRespuestaAsistente('<b>'+esc(c.titulo)+'</b><br>'+textoConcepto(c,accionModulo,false,false),true);
+  setTimeout(function(){ const chat=document.getElementById('asistenteChat'); if(chat) chat.scrollTop=chat.scrollHeight; },80);
+}
+window.addEventListener('keydown',function(e){
+  const modal=document.getElementById('buscarModal');
+  const tecla=String(e.key||'').toLowerCase();
+  if((e.ctrlKey||e.metaKey) && tecla==='k'){
+    e.preventDefault();
+    if(!modal || modal.classList.contains('hidden')) abrirBuscar(); else cerrarBuscar();
+    return;
+  }
+  if(!modal || modal.classList.contains('hidden')) return;
+  if(e.key==='Escape'){ e.preventDefault(); cerrarBuscar(); }
+  else if(e.key==='ArrowDown'){ e.preventDefault(); moverSeleccionBuscar(1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); moverSeleccionBuscar(-1); }
+  else if(e.key==='Enter'){ e.preventDefault(); elegirResultadoBuscar(buscarIndice); }
+});
+
+/* ============================================================
+   Instalar la PWA con botón propio (beforeinstallprompt).
+   Si el navegador no ofrece el evento, el botón queda oculto.
+   ============================================================ */
+function actualizarBotonInstalar(){
+  const b=document.getElementById('btnInstalar');
+  if(!b) return;
+  const standalone=window.matchMedia && matchMedia('(display-mode: standalone)').matches;
+  const enApp=!!actual && !document.getElementById('app').classList.contains('hidden');
+  b.classList.toggle('hidden',!eventoInstalacion || standalone || !enApp);
+}
+async function instalarApp(){
+  if(!eventoInstalacion) return toast('Este navegador no permite el botón de instalación. Use el menú del navegador.');
+  const evento=eventoInstalacion;
+  evento.prompt();
+  try{
+    const respuesta=await evento.userChoice;
+    if(respuesta && respuesta.outcome==='accepted'){
+      eventoInstalacion=null;
+      toast('Listo: AgroVerde quedó instalada en este dispositivo.');
+    }else{
+      toast('Instalación cancelada. Puedes intentarlo de nuevo.');
+    }
+  }catch(err){ toast('No se pudo completar la instalación.'); }
+  actualizarBotonInstalar();
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  eventoInstalacion=e;
+  actualizarBotonInstalar();
+});
+window.addEventListener('appinstalled',function(){
+  eventoInstalacion=null;
+  actualizarBotonInstalar();
+  toast('AgroVerde se instaló en este dispositivo.');
 });
 
 /* ---------- Arranque ---------- */

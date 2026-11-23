@@ -23,11 +23,17 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
    - **Vercel / Cloudflare Pages**: importa la carpeta como sitio estático.
 2. **Abrir esa URL en el celular** (Chrome en Android, Safari en iPhone).
 3. **Instalar**:
-   - Android/Chrome: menú `⋮` → **Instalar app** / **Agregar a pantalla de inicio**.
+   - Android/Chrome: botón **⬇️ Instalar app** de la barra superior (aparece solo cuando el navegador lo permite) o menú `⋮` → **Instalar app** / **Agregar a pantalla de inicio**.
    - iPhone/Safari: botón **Compartir** → **Agregar a inicio**.
 4. Se crea el ícono **AgroVerde** en el inicio; al tocarlo abre a pantalla completa como app nativa. Gracias al service worker, sigue funcionando **sin conexión** después de la primera carga.
 
-> Nota: abrir `index.html` directamente como archivo local (`file://`) sirve para probar en PC, pero los navegadores móviles no permiten instalar PWA ni service worker desde `file://`; por eso el paso de publicación HTTPS es necesario para el modo “app instalada”.
+> Nota: abrir `index.html` directamente como archivo local (`file://`) sirve para probar en PC, pero los navegadores móviles no permiten instalar PWA ni service worker desde `file://`; por eso el paso de publicación HTTPS es necesario para el modo “app instalada”. El botón **⬇️ Instalar app** se oculta automáticamente si el navegador no expone `beforeinstallprompt` o si la app ya está instalada.
+
+## Herramientas nuevas (sin base de datos)
+
+- **🎓 Tour guiado:** al iniciar sesión por primera vez aparece un recorrido de **6 pasos** — Inicio → Registro de cierre → Escáner → Validación → Consulta → Trazabilidad — que resalta cada módulo y abre su pantalla. Se adapta a los módulos permitidos por el rol. Se puede volver a ver con el botón **🎓 Tour** de la barra superior. La preferencia se guarda en `localStorage` (`agroverde-tour-visto`).
+- **🔎 Buscador global:** teclee **`Ctrl+K`** (o **`⌘K`** en Mac) o use el botón **🔎 Buscar**. Busca módulos, conceptos del glosario (ayuda) y lotes por código/ línea/ fecha, sin acentos. `↑`/`↓` eligen, `Enter` abre, `Esc` cierra. Al elegir un concepto se muestra su explicación en el asistente; al elegir un lote se abre Consulta con el filtro aplicado.
+- **⬇️ Instalar app:** captura `beforeinstallprompt`, muestra el aviso nativo del navegador y confirma el resultado. No usa claves, API ni base de datos.
 
 ## Usuarios (RNF01 — autenticación con roles)
 
