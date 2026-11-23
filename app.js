@@ -474,20 +474,26 @@ async function iniciarEscaneo(){
     msg.textContent='Lectura automática no soportada en este navegador. Usa la captura manual.';
     return toast('Tu navegador no lee códigos automáticamente; usa captura manual.');
   }
+  detenerEscaneo(true);
+  // Pedir pantalla completa ANTES de cualquier await: el navegador solo la
+  // concede mientras el gesto del botón (onclick) sigue activo.
+  ponerPantallaCompleta(document.getElementById('camaraBox'),video);
   try{
-    detenerEscaneo(true);
     streamCamara=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
     video.srcObject=streamCamara;
     await video.play();
+    if(!document.fullscreenElement && video.webkitEnterFullscreen){
+      try{ video.webkitEnterFullscreen(); }catch(e){}
+    }
     const formatos=await BarcodeDetector.getSupportedFormats();
     const preferidos=['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','itf','codabar'];
     const usar=preferidos.filter(f=>formatos.includes(f));
     detectorCodigos=new BarcodeDetector({formats:usar.length?usar:formatos.slice(0,3)});
     escaneoActivo=true;
-    msg.textContent='Cámara activa · apunta al código del lote';
-    ponerPantallaCompleta(document.getElementById('camaraBox'),video);
+    msg.textContent='Cámara activa · apunta al código del lote · ✕ Salir o Esc para cerrar';
     bucleEscaneo();
   }catch(err){
+    detenerEscaneo(true);
     msg.textContent='No se pudo activar la cámara: '+((err&&err.message)?err.message:'permiso denegado');
     toast('No se pudo activar la cámara. Usa la captura manual.');
   }
