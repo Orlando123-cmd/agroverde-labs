@@ -1195,7 +1195,7 @@ async function verificarIA(){
     const d=await disponibilidadIA(iaApi);
     if(d==='no'){ actualizarEstadoIA('no','Asistente local · siempre disponible'); return false; }
     if(d==='descargando'){ actualizarEstadoIA('descargando','Descargando modelo local…'); return false; }
-    if(d==='descargable'){ actualizarEstadoIA('descargable','IA local lista para descargar · toca IA'); return false; }
+    if(d==='descargable'){ actualizarEstadoIA('descargable','Asistente local · siempre disponible'); return false; }
     actualizarEstadoIA('disponible','IA local disponible · escribe y responde al instante');
     return true;
   }catch(err){
