@@ -2053,7 +2053,7 @@ function iniciarTour(manual){
   document.body.classList.add('tour-abierto');
   ir(tourPasos[0].modulo);
   window.scrollTo(0,0);
-  requestAnimationFrame(mostrarPasoTour);
+  mostrarPasoTour(); setTimeout(mostrarPasoTour,0);
 }
 function mostrarPasoTour(){
   const ov=document.getElementById('tourOverlay');
@@ -2101,7 +2101,7 @@ function pasoTour(delta){
   tourPaso=siguiente;
   ir(tourPasos[tourPaso].modulo);
   window.scrollTo(0,0);
-  requestAnimationFrame(mostrarPasoTour);
+  mostrarPasoTour(); setTimeout(mostrarPasoTour,0);
 }
 function cerrarTour(e){
   if(e && e.target && e.target.id!=='tourOverlay') return;
@@ -2114,7 +2114,7 @@ function cerrarTour(e){
 }
 function recolocarTour(){
   const ov=document.getElementById('tourOverlay');
-  if(ov && !ov.classList.contains('hidden')) requestAnimationFrame(mostrarPasoTour);
+  if(ov && !ov.classList.contains('hidden')) mostrarPasoTour();
 }
 window.addEventListener('resize',recolocarTour);
 window.addEventListener('orientationchange',recolocarTour);
