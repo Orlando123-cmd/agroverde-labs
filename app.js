@@ -1569,6 +1569,7 @@ function responderAsistente(t,escribir){
   const accion=function(id,label){ return '<button class="chat-action" onclick="ir(\''+id+'\');toggleAsistente()">'+label+' →</button>'; };
   const codigo=(t.match(/LOTE-[\w-]+/i)||[])[0];
   let r='';
+  let esFallback=false;
 
   if(/hola|buenas|buen dia|buen día|ayuda|quién eres|quien eres|qué puedes hacer|que puedes hacer/.test(q)){
     r='Estoy aquí para guiarte en tu turno. Puedo ayudarte con: <b>registro de lotes</b>, <b>escáner</b>, <b>modo offline</b>, <b>validación</b>, <b>stock</b>, <b>RRHH</b>, <b>documentos</b> y <b>trazabilidad</b>. '+accion('inicio','Ver panel de inicio');
@@ -1630,13 +1631,17 @@ function responderAsistente(t,escribir){
   } else if(/gracias/.test(q)){
     r='¡Con gusto! Si te surge otra duda en el turno, aquí estoy. 🌱';
   } else {
+    esFallback=true;
     const permitidos=MODULOS_INFO.filter(function(m){ return !m.id||tiene(m.id); });
     const botones=permitidos.map(function(m){ return accion(m.id,m.icono+' '+m.label); }).join(' ');
     r='Puedo ayudarte con estos módulos. Elige uno y te explico <b>qué es</b>, sus <b>funciones</b> y <b>dónde está</b>:<br>'+botones+
       '<br><br>También puedes escribir <b>LOTE-2026-001</b> para consultar un lote o preguntar, por ejemplo, <b>¿qué es un lote?</b>.';
   }
   const concepto=(!codigo&&!/gracias/.test(q))?buscarConcepto(t):null;
-  if(concepto) r+=textoConcepto(concepto,accion,r.indexOf('chat-action')>=0,r.length>0);
+  if(concepto){
+    if(esFallback) r='';
+    r+=textoConcepto(concepto,accion,r.indexOf('chat-action')>=0,r.length>0);
+  }
   mostrarRespuestaAsistente(r,escribir);
 }
 function mostrarRespuestaAsistente(html,escribir){
