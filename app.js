@@ -1704,20 +1704,52 @@ function ensureAyudaCard(){
       '<span>🛟 ¿En qué quieres que te ayude?</span><span id="ayudaCardFlecha">▾</span>'+
     '</div>'+
     '<div class="ayuda-card-body" id="ayudaCardBody">'+
+      '<p class="ayuda-pista">Toca un tema para ver las opciones en pantalla grande.</p>'+
       '<div class="ayuda-temas" id="ayudaTemas"></div>'+
       '<div class="ayuda-opciones hidden" id="ayudaOpciones"></div>'+
     '</div>';
   chat.insertBefore(card,chat.firstChild);
   renderAyudaTemas();
 }
-function abrirAyudaRapida(){
+function abrirAyudaModal(i){
   ensureAyudaCard();
-  const body=document.getElementById('ayudaCardBody');
-  const card=document.getElementById('ayudaCard');
-  if(body) body.classList.remove('hidden');
-  const flecha=document.getElementById('ayudaCardFlecha');
-  if(flecha) flecha.textContent='▾';
-  if(card && card.scrollIntoView) card.scrollIntoView({block:'nearest',behavior:'smooth'});
+  const modal=document.getElementById('ayudaModal');
+  if(!modal) return;
+  modal.classList.remove('hidden');
+  if(typeof i==='number') mostrarTemaModal(i); else mostrarTemasModal();
+}
+function abrirAyudaRapida(){ abrirAyudaModal(); }
+function cerrarAyudaModal(){
+  const modal=document.getElementById('ayudaModal');
+  if(modal) modal.classList.add('hidden');
+}
+function mostrarTemasModal(){
+  const titulo=document.getElementById('ayudaModalTitulo');
+  const cuerpo=document.getElementById('ayudaModalBody');
+  const volver=document.getElementById('ayudaModalVolver');
+  if(!titulo||!cuerpo) return;
+  titulo.textContent='¿En qué quieres que te ayude?';
+  if(volver) volver.classList.add('hidden');
+  cuerpo.innerHTML='<div class="ayuda-modal-temas">'+CONCEPTOS_AGROVERDE.map(function(c,i){
+    return '<button type="button" class="ayuda-modal-tema" onclick="mostrarTemaModal('+i+')">'+
+      '<span>'+iconoConcepto(c)+'</span>'+esc(c.titulo)+'</button>';
+  }).join('')+'</div>';
+}
+function mostrarTemaModal(i){
+  const c=CONCEPTOS_AGROVERDE[i];
+  const titulo=document.getElementById('ayudaModalTitulo');
+  const cuerpo=document.getElementById('ayudaModalBody');
+  const volver=document.getElementById('ayudaModalVolver');
+  if(!c||!titulo||!cuerpo) return;
+  titulo.textContent=c.titulo;
+  if(volver) volver.classList.remove('hidden');
+  ayudaOpcionesActuales=(OPCIONES_AYUDA[c.titulo]||c.funciones||[]).slice();
+  ayudaOpcionesActuales.push('📘 Explícame '+c.titulo+' completo');
+  const ultima=ayudaOpcionesActuales.length-1;
+  cuerpo.innerHTML='<p class="ayuda-modal-que">'+esc(c.que)+'</p>'+
+    '<div class="ayuda-modal-opciones">'+ayudaOpcionesActuales.map(function(o,j){
+      return '<button type="button" class="ayuda-modal-opcion'+(j===ultima?' ayuda-completa':'')+'" onclick="elegirOpcionAyuda('+i+','+j+')">'+esc(o)+'</button>';
+    }).join('')+'</div>';
 }
 function toggleAyudaCard(){
   const body=document.getElementById('ayudaCardBody');
@@ -1730,45 +1762,28 @@ function renderAyudaTemas(){
   const cont=document.getElementById('ayudaTemas');
   if(!cont) return;
   cont.innerHTML=CONCEPTOS_AGROVERDE.map(function(c,i){
-    return '<button type="button" class="ayuda-tema" onclick="verOpcionesAyuda('+i+')">'+iconoConcepto(c)+' '+esc(c.titulo)+'</button>';
+    return '<button type="button" class="ayuda-tema" onclick="abrirAyudaModal('+i+')">'+iconoConcepto(c)+' '+esc(c.titulo)+'</button>';
   }).join('');
 }
-function verOpcionesAyuda(i){
-  const c=CONCEPTOS_AGROVERDE[i];
-  const temas=document.getElementById('ayudaTemas');
-  const ops=document.getElementById('ayudaOpciones');
-  if(!c||!temas||!ops) return;
-  temas.classList.add('hidden');
-  ops.classList.remove('hidden');
-  ayudaOpcionesActuales=(OPCIONES_AYUDA[c.titulo]||c.funciones||[]).slice();
-  ayudaOpcionesActuales.push('📘 Explícame '+c.titulo+' completo');
-  const ultima=ayudaOpcionesActuales.length-1;
-  ops.innerHTML='<button type="button" class="ayuda-volver" onclick="volverTemas()">← Todos los temas</button>'+
-    '<p class="ayuda-que">'+esc(c.que)+'</p>'+
-    ayudaOpcionesActuales.map(function(o,j){
-      return '<button type="button" class="ayuda-opcion'+(j===ultima?' ayuda-completa':'')+'" onclick="elegirOpcionAyuda('+i+','+j+')">'+esc(o)+'</button>';
-    }).join('');
-}
-function volverTemas(){
-  const temas=document.getElementById('ayudaTemas');
-  const ops=document.getElementById('ayudaOpciones');
-  if(temas) temas.classList.remove('hidden');
-  if(ops){ ops.classList.add('hidden'); ops.innerHTML=''; }
-}
+function verOpcionesAyuda(i){ abrirAyudaModal(i); }
+function volverTemas(){ mostrarTemasModal(); }
 function elegirOpcionAyuda(i,j){
   const c=CONCEPTOS_AGROVERDE[i];
   const op=ayudaOpcionesActuales[j];
-  volverTemas();
+  cerrarAyudaModal();
   if(!c||!op) return;
+  const chat=document.getElementById('asistenteChat');
   mensajeAsistente(op,'user');
   const encabezado='<b>'+esc(op)+'</b><br>';
   mostrarRespuestaAsistente(encabezado+textoConcepto(c,accionModulo,false,false),true);
+  if(chat) setTimeout(function(){ chat.scrollTop=chat.scrollHeight; },80);
 }
 
 function toggleAsistente(){
   const panel=document.getElementById('asistentePanel');
   const abrir=panel.classList.contains('hidden');
   panel.classList.toggle('hidden',!abrir);
+  if(!abrir) cerrarAyudaModal();
   if(abrir){
     ensureAyudaCard();
     verificarIA();

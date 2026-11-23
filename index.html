@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>AgroVerde S.A.C. — Sistema de Trazabilidad de Lotes</title>
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
 
@@ -113,6 +113,18 @@
   <button id="asistenteFab" class="asistente-fab" onclick="toggleAsistente()" aria-label="Abrir asistente">💬</button>
 </div>
 
+<!-- ============ AYUDA EN PANTALLA COMPLETA ============ -->
+<div id="ayudaModal" class="ayuda-modal hidden" role="dialog" aria-modal="true" aria-label="Ayuda del asistente">
+  <div class="ayuda-modal-box">
+    <div class="ayuda-modal-head">
+      <button type="button" id="ayudaModalVolver" class="ayuda-modal-btn hidden" onclick="mostrarTemasModal()" aria-label="Volver a temas">←</button>
+      <strong id="ayudaModalTitulo">¿En qué quieres que te ayude?</strong>
+      <button type="button" class="ayuda-modal-btn" onclick="cerrarAyudaModal()" aria-label="Cerrar ayuda">✕</button>
+    </div>
+    <div id="ayudaModalBody" class="ayuda-modal-body"></div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 <div id="modal" class="modal hidden" onclick="cerrarModal(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
@@ -121,11 +133,11 @@
   </div>
 </div>
 
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js?v=19').catch(function () {});
+    navigator.serviceWorker.register('sw.js?v=20').catch(function () {});
   });
 }
 </script>
