@@ -24,7 +24,7 @@
 | Apoyo a RF02/RF05/RF11 | Alertas del turno | CU02 / CU05 / CU06 | Inicio | Avisos de pendientes, stock insuficiente, legajos bloqueados y consentimientos por vencer |
 | Apoyo a RF03/RF09 | Reportes descargables | CU03 / CU08 | Consulta, Trazabilidad, Auditoría | CSV con BOM y botón «Guardar PDF (imprimir)» |
 | Apoyo a RNF01 | Respaldo y gestión de usuarios | CU00 | Auditoría y respaldos / Gestión de usuarios | Exportación e importación JSON; alta, baja y cambio de clave sin mostrar contraseñas |
-| Apoyo a RNF04 | Asistente con IA local | — | Asistente virtual | Detecta `LanguageModel` / `ai.languageModel` / `ai.assistant`; activación con botón **IA** o automática; respuesta progresiva con `promptStreaming()`, respaldo con `prompt()` y, si falla o no existe la API, respuestas por reglas locales. Sin clave ni internet; el prompt no incluye contraseñas ni datos personales identificables |
+| Apoyo a RNF04 | Asistente con IA local | — | Asistente virtual | Detecta `LanguageModel` / `ai.languageModel` / `ai.assistant`; activación con botón **IA** o automática; respuesta progresiva con `promptStreaming()`, respaldo con `prompt()` y, si falla o no existe la API, respuestas por reglas locales. Sin clave ni servicio externo de la app; la descarga inicial del modelo la gestiona el navegador. El prompt no incluye contraseñas ni datos personales identificables |
 
 ## Reglas de negocio implementadas
 

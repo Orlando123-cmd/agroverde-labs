@@ -69,7 +69,7 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 
 - El encabezado del chat muestra el estado: **comprobando IA**, **IA local disponible**, **descargando modelo**, **IA local activa** o **asistente por reglas**.
 - El botón **IA** activa el modelo local; si hace falta, descarga el modelo del navegador mostrando el avance. Cuando ya está listo, se activa automáticamente al escribir la primera pregunta.
-- **No hay clave, servidor ni llamada a internet**: se usa `window.LanguageModel`, `window.ai.languageModel` o `window.ai.assistant`, según lo que ofrezca el navegador.
+- **La app no llama a servicios externos ni usa claves**: se usa `window.LanguageModel`, `window.ai.languageModel` o `window.ai.assistant`, según lo que ofrezca el navegador. Si el modelo local aún no está instalado, Chrome lo descarga una sola vez.
 - Cada pregunta envía solo el puesto, los módulos permitidos y un resumen de lotes y stock del dispositivo. **Nunca se envían contraseñas, claves ni nombres/DNI de trabajadores**.
 - La respuesta se escribe progresivamente con `promptStreaming()`. Si el navegador solo soporta `prompt()`, aparece completa; si la IA no existe o falla, el asistente vuelve automáticamente a las **reglas locales**.
 - En Chrome/Edge recientes la función puede requerir habilitar *Prompt API for Gemini Nano* y *Optimization Guide On Device Model* en `chrome://flags`, además de descargar el modelo una vez. Si no está disponible, la app sigue funcionando con el asistente de reglas.
