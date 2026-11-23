@@ -1,5 +1,6 @@
-/* AgroVerde PWA — service worker: caché de la app para uso sin conexión. */
-const CACHE = 'agroverde-v2';
+/* AgroVerde PWA — service worker: red primero, copia local sin conexión.
+   Así las actualizaciones se ven en cuanto hay internet. */
+const CACHE = 'agroverde-v3';
 const SHELL = [
   './',
   './index.html',
@@ -16,7 +17,8 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -24,15 +26,20 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const red = fetch(e.request).then((resp) => {
-        if (resp && resp.status === 200 && resp.type === 'basic') {
+    fetch(e.request)
+      .then((resp) => {
+        if (resp && resp.ok && resp.type === 'basic') {
           const copia = resp.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copia));
         }
         return resp;
-      }).catch(() => cached);
-      return cached || red;
-    })
+      })
+      .catch(() =>
+        caches.match(e.request).then((guardado) => {
+          if (guardado) return guardado;
+          if (e.request.mode === 'navigate') return caches.match('./index.html');
+          return Response.error();
+        })
+      )
   );
 });
