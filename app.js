@@ -1831,6 +1831,8 @@ function toggleAsistente(){
   document.body.classList.toggle('asistente-abierto',abrir);
   if(!abrir) cerrarAyudaModal();
   if(abrir){
+    const ovTour=document.getElementById('tourOverlay');
+    if(ovTour && !ovTour.classList.contains('hidden')) cerrarTour();
     ensureAyudaCard();
     setTimeout(actualizarFlechasQuick,60);
     verificarIA();
@@ -2037,6 +2039,10 @@ function maybeIniciarTour(){
 }
 function iniciarTour(manual){
   if(!actual) return;
+  // Evita capas superpuestas: el tour va solo, sin ayuda ni buscador encima.
+  cerrarAyudaModal(); cerrarBuscar();
+  const panelAsistente=document.getElementById('asistentePanel');
+  if(panelAsistente && !panelAsistente.classList.contains('hidden')) toggleAsistente();
   tourPasos=construirPasosTour();
   if(!tourPasos.length) return;
   if(!manual && tourVisto()) return;
@@ -2126,6 +2132,8 @@ function construirIndiceBuscar(){
 function abrirBuscar(){
   const modal=document.getElementById('buscarModal');
   if(!modal || (actual && document.getElementById('app').classList.contains('hidden'))) return;
+  const ovTour=document.getElementById('tourOverlay');
+  if(ovTour && !ovTour.classList.contains('hidden')) cerrarTour();
   cerrarAyudaModal();
   const gen=document.getElementById('modal'); if(gen) gen.classList.add('hidden');
   document.body.classList.remove('modal-abierto');
