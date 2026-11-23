@@ -54,6 +54,9 @@ let streamCamara = null;
 let detectorCodigos = null;
 let escaneoActivo = false;
 let ultimoEscaneo = 0;
+let canvasEscaneo = null;
+let ultimoAnalisisInterno = 0;
+let camarasDisponibles = [];
 let ultimoReporte = null;
 let ultimaConsulta = [];
 
@@ -229,6 +232,7 @@ function ir(mod){
   const views={inicio:vInicio,cierre:vCierre,escanear:vEscanear,validar:vValidar,offline:vOffline,consulta:vConsulta,ingreso:vIngreso,
     conciliacion:vConciliacion,personal:vPersonal,documentos:vDocumentos,trazabilidad:vTrazabilidad,consumo:vConsumo,auditoria:vAuditoria,usuarios:vUsuarios};
   document.getElementById('contenido').innerHTML=(views[mod]||vInicio)();
+  if(mod==='escanear') listarCamarasSinPermiso();
 }
 
 /* ---------- Alertas del inicio ---------- */
@@ -383,12 +387,14 @@ function imprimirCodigoPrueba(){
     '<br><button class="btn" onclick="window.print()">Imprimir código</button></body></html>');
   w.document.close();
 }
-function decodificarBits128(bits){
+function decodificarBits128(bits,inicioIdx){
+  inicioIdx=(inicioIdx===undefined?104:inicioIdx); // 103=A, 104=B, 105=C
   const patrones={};
   for(let i=0;i<CODE128_BARS.length;i++) patrones[String(CODE128_BARS[i])]=i;
   const stop=String(CODE128_BARS[106]);
-  if(bits.slice(0,11)!==String(CODE128_BARS[104])) throw new Error('Patrón de inicio B no encontrado.');
-  let p=11, suma=104, pos=0, texto='', checksum=null;
+  const inicioPat=String(CODE128_BARS[inicioIdx]);
+  if(bits.slice(0,inicioPat.length)!==inicioPat) throw new Error('Patrón de inicio no encontrado.');
+  let p=inicioPat.length, suma=inicioIdx, pos=0, texto='', checksum=null;
   while(p<bits.length){
     if(bits.slice(p,p+stop.length)===stop) break;
     if(p+11>bits.length) throw new Error('Código incompleto.');
@@ -396,7 +402,11 @@ function decodificarBits128(bits){
     if(v===undefined) throw new Error('Patrón desconocido en el código.');
     p+=11;
     if(bits.slice(p,p+stop.length)===stop){ checksum=v; break; }
-    pos++; texto+=String.fromCharCode(v+32); suma+=v*pos;
+    pos++;
+    if(inicioIdx===105) texto+=('0'+v).slice(-2);
+    else if(inicioIdx===103) texto+= v<64?String.fromCharCode(v+32):String.fromCharCode(v-64);
+    else texto+=String.fromCharCode(v+32);
+    suma+=v*pos;
   }
   if(checksum===null) throw new Error('No se encontró el patrón de parada.');
   if(suma%103!==checksum) throw new Error('El checksum no coincide.');
@@ -427,6 +437,73 @@ async function leerCodigo128DesdeSvg(svg){
     }
     return decodificarBits128(bits);
   } finally { URL.revokeObjectURL(url); }
+}
+/* ---------- Lector interno de Code128 para cuadros de cámara ----------
+   Funciona aunque el navegador no tenga BarcodeDetector (caso típico de PC).
+   Busca el patrón de inicio en cada fila y valida el checksum antes de devolver. */
+const START128=[
+  {idx:104,pat:String(CODE128_BARS[104])},
+  {idx:103,pat:String(CODE128_BARS[103])},
+  {idx:105,pat:String(CODE128_BARS[105])}
+];
+const STOP128=String(CODE128_BARS[106]);
+function bitsMuestreados128(lum,inicioX,modulo,maxModulos,ancho,umbral){
+  let bits='';
+  for(let b=0;b<maxModulos;b++){
+    const px=Math.round(inicioX+(b+0.5)*modulo);
+    if(px<0||px>=ancho) break;
+    bits+=lum[px]<umbral?'1':'0';
+    if(b>10 && bits.slice(-STOP128.length)===STOP128) break;
+  }
+  return bits;
+}
+function leerCode128DesdeCanvas(canvas){
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  const w=canvas.width,h=canvas.height;
+  if(!w||!h) return null;
+  const img=ctx.getImageData(0,0,w,h).data;
+  const paso=Math.max(2,Math.round(h/80));
+  const maxModulos=11+95*11+STOP128.length;
+  for(let u=0;u<2;u++){
+    const umbral=u?160:120;
+    for(let y=Math.floor(h*0.04); y<Math.floor(h*0.96); y+=paso){
+      const lum=new Float32Array(w);
+      const runs=[]; let actual=null;
+      for(let px=0;px<w;px++){
+        const i=(y*w+px)*4;
+        const v=img[i]*0.299+img[i+1]*0.587+img[i+2]*0.114;
+        lum[px]=v;
+        const dark=v<umbral;
+        if(!actual || actual.dark!==dark){ actual={dark:dark,len:1,x:px}; runs.push(actual); }
+        else actual.len++;
+      }
+      for(let r=0;r<runs.length-6;r++){
+        if(!runs[r].dark || runs[r].len<2 || runs[r].len>40) continue;
+        const bases=[runs[r].len/2,runs[r].len/4,runs[r].len];
+        for(let b=0;b<bases.length;b++){
+          const base=bases[b];
+          if(base<1.2||base>18) continue;
+          const desde=Math.max(1.2,base-0.4);
+          for(let modulo=desde;modulo<=base+0.4;modulo+=0.02){
+            for(let s=0;s<START128.length;s++){
+              const st=START128[s];
+              for(let dx=-1;dx<=1;dx++){
+                const inicioX=runs[r].x+dx;
+                const muestra=bitsMuestreados128(lum,inicioX,modulo,11,w,umbral);
+                if(muestra.length<11) continue;
+                let dif=0;
+                for(let k=0;k<11;k++) if(muestra[k]!==st.pat[k]) dif++;
+                if(dif>2) continue;
+                const bits=bitsMuestreados128(lum,inicioX,modulo,maxModulos,w,umbral);
+                try{ return decodificarBits128(bits,st.idx); }catch(e){}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return null;
 }
 async function verificarCodigoPrueba(){
   const codigo=val('bcLote');
@@ -470,10 +547,75 @@ async function verificarCodigoPrueba(){
 }
 
 /* ---------- Escáner QR / código de barras ---------- */
+function esEquipoEscritorio(){
+  if(!window.matchMedia) return innerWidth>=700;
+  return innerWidth>=700 && matchMedia('(pointer:fine)').matches;
+}
+function actualizarSelectorCamaras(textoEstado){
+  const sel=document.getElementById('camaraDispositivo');
+  if(sel){
+    const anterior=sel.value;
+    sel.innerHTML='<option value="">Predeterminada</option>'+
+      '<option value="environment">Trasera (celular)</option>'+
+      '<option value="user">Frontal (celular)</option>'+
+      camarasDisponibles.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>'; }).join('');
+    if(anterior && Array.from(sel.options).some(function(o){ return o.value===anterior; })) sel.value=anterior;
+  }
+  const estado=document.getElementById('estadoCamaras');
+  if(estado && textoEstado) estado.textContent=textoEstado;
+}
+async function listarCamarasSinPermiso(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    camarasDisponibles=devices.filter(function(d){ return d.kind==='videoinput'; })
+      .map(function(d,i){ return {id:d.deviceId,label:d.label||('Cámara '+(i+1))}; });
+    actualizarSelectorCamaras(camarasDisponibles.length
+      ? 'Cámaras detectadas: '+camarasDisponibles.length+'. Pulsa «Detectar cámaras» para ver sus nombres.'
+      : '');
+  }catch(e){}
+}
+async function detectarCamaras(){
+  const estado=document.getElementById('estadoCamaras');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices){
+    if(estado) estado.textContent='Este navegador no permite enumerar cámaras. Puedes usar la predeterminada.';
+    return;
+  }
+  if(estado) estado.textContent='Detectando cámaras...';
+  let temporal=null;
+  try{
+    if(!streamCamara) temporal=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    camarasDisponibles=devices.filter(function(d){ return d.kind==='videoinput'; })
+      .map(function(d,i){ return {id:d.deviceId,label:d.label||('Cámara '+(i+1))}; });
+  }catch(err){
+    try{
+      const devices=await navigator.mediaDevices.enumerateDevices();
+      camarasDisponibles=devices.filter(function(d){ return d.kind==='videoinput'; })
+        .map(function(d,i){ return {id:d.deviceId,label:d.label||('Cámara '+(i+1))}; });
+    }catch(e){ camarasDisponibles=[]; }
+  }finally{
+    if(temporal) temporal.getTracks().forEach(function(t){ t.stop(); });
+  }
+  actualizarSelectorCamaras(camarasDisponibles.length
+    ? 'Se detectaron '+camarasDisponibles.length+' cámara(s). Elige una y activa el escáner.'
+    : 'No se detectaron cámaras. Revisa el permiso del navegador o usa la captura manual.');
+}
 function vEscanear(){
+  const escritorio=esEquipoEscritorio();
   return `<h2>Escáner de lote <small>(apoyo a RF01 · RF03)</small></h2>
   <div class="card">
     <p>Apunta la cámara al <b>QR o código de barras</b> del lote. Al leerlo podrás verlo en Consulta, generar su trazabilidad o usar el código en un nuevo cierre.</p>
+    <div class="camara-controles">
+      <label>Cámara <select id="camaraDispositivo">
+        <option value="">Predeterminada</option>
+        <option value="environment">Trasera (celular)</option>
+        <option value="user">Frontal (celular)</option>
+        ${camarasDisponibles.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>'; }).join('')}
+      </select></label>
+      <button class="btn small ghost" type="button" onclick="detectarCamaras()">🔎 Detectar cámaras</button>
+    </div>
+    <p id="estadoCamaras" class="hint"></p>
     <div class="scanner-box" id="camaraBox">
       <video id="camaraVideo" playsinline muted autoplay></video>
       <div class="scanner-marca"></div>
@@ -481,11 +623,13 @@ function vEscanear(){
       <button class="scanner-salir" onclick="detenerEscaneo()" aria-label="Cerrar cámara">✕ Salir</button>
     </div>
     <p class="acciones-tabla">
-      <button class="btn" onclick="iniciarEscaneo()">📷 Activar cámara (pantalla completa)</button>
+      <button class="btn" onclick="iniciarEscaneo()">${escritorio?'📷 Activar cámara de PC':'📷 Activar cámara (pantalla completa)'}</button>
       <button class="btn ghost" onclick="detenerEscaneo()">⏹ Detener cámara</button>
     </p>
     <div id="resultadoEscaneo" class="msg"></div>
-    <p class="hint">La cámara necesita el link publicado (HTTPS) y permiso del navegador. Al activarla ocupa toda la pantalla; toca <b>Salir</b> o presiona Esc para volver. Si tu equipo no la soporta, usa la captura manual.</p>
+    <p class="hint">${escritorio
+      ? 'En computadora selecciona tu cámara web y pulsa «Activar cámara de PC». La lectura de <b>códigos de barras Code128</b> funciona aunque el navegador no tenga lector nativo; para QR se necesita un navegador con BarcodeDetector (Chrome/Edge recientes).'
+      : 'La cámara necesita el link publicado (HTTPS) y permiso del navegador. Al activarla ocupa toda la pantalla; toca <b>Salir</b> o presiona Esc para volver. Si tu equipo no la soporta, usa la captura manual.'}</p>
   </div>
   <div class="card"><h3>Código de barras de prueba</h3>
     <p>Genera un <b>Code128</b> real para verificar el lector. Muestra este código en otra pantalla o imprímelo y escanealo desde la cámara.</p>
@@ -512,28 +656,49 @@ async function iniciarEscaneo(){
     msg.textContent='Este navegador no permite usar la cámara. Usa la captura manual.';
     return toast('Cámara no disponible: usa la captura manual.');
   }
-  if(!('BarcodeDetector' in window)){
-    msg.textContent='Lectura automática no soportada en este navegador. Usa la captura manual.';
-    return toast('Tu navegador no lee códigos automáticamente; usa captura manual.');
-  }
   detenerEscaneo(true);
-  // Pedir pantalla completa ANTES de cualquier await: el navegador solo la
-  // concede mientras el gesto del botón (onclick) sigue activo.
-  ponerPantallaCompleta(document.getElementById('camaraBox'),video);
+  const escritorio=esEquipoEscritorio();
+  // En celular se pide pantalla completa ANTES de cualquier await: el navegador
+  // solo la concede mientras el gesto del botón (onclick) sigue activo.
+  if(!escritorio) ponerPantallaCompleta(document.getElementById('camaraBox'),video);
+  const selector=document.getElementById('camaraDispositivo');
+  const elegido=selector?selector.value:'';
+  let videoConstraints;
+  if(elegido && elegido!=='user' && elegido!=='environment'){
+    videoConstraints={deviceId:{exact:elegido},width:{ideal:1280},height:{ideal:720}};
+  } else if(elegido==='user'){
+    videoConstraints={facingMode:'user',width:{ideal:1280},height:{ideal:720}};
+  } else if(elegido==='environment' || !escritorio){
+    videoConstraints={facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}};
+  } else {
+    videoConstraints={width:{ideal:1280},height:{ideal:720}};
+  }
   try{
-    streamCamara=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    streamCamara=await navigator.mediaDevices.getUserMedia({video:videoConstraints,audio:false});
     video.srcObject=streamCamara;
     await video.play();
-    if(!document.fullscreenElement && video.webkitEnterFullscreen){
+    if(!escritorio && !document.fullscreenElement && video.webkitEnterFullscreen){
       try{ video.webkitEnterFullscreen(); }catch(e){}
     }
-    const formatos=await BarcodeDetector.getSupportedFormats();
-    const preferidos=['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','itf','codabar'];
-    const usar=preferidos.filter(f=>formatos.includes(f));
-    detectorCodigos=new BarcodeDetector({formats:usar.length?usar:formatos.slice(0,3)});
+    let soportaQR=false;
+    detectorCodigos=null;
+    if('BarcodeDetector' in window){
+      try{
+        const formatos=await BarcodeDetector.getSupportedFormats();
+        const preferidos=['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','itf','codabar'];
+        const usar=preferidos.filter(f=>formatos.includes(f));
+        if(usar.length){
+          detectorCodigos=new BarcodeDetector({formats:usar});
+          soportaQR=true;
+        }
+      }catch(e){ detectorCodigos=null; }
+    }
     escaneoActivo=true;
-    msg.textContent='Cámara activa · apunta al código del lote · ✕ Salir o Esc para cerrar';
+    msg.textContent=soportaQR
+      ? 'Cámara activa · apunta al QR o código de barras · ✕ Salir o Esc para cerrar'
+      : 'Cámara activa · lector interno de código de barras · ✕ Salir para cerrar';
     bucleEscaneo();
+    toast(escritorio?'Cámara de PC activada.':'Cámara activada.');
   }catch(err){
     detenerEscaneo(true);
     msg.textContent='No se pudo activar la cámara: '+((err&&err.message)?err.message:'permiso denegado');
@@ -548,8 +713,9 @@ function ponerPantallaCompleta(box,video){
 }
 function detenerEscaneo(silencioso){
   escaneoActivo=false;
+  ultimoAnalisisInterno=0;
   try{ if(document.fullscreenElement) document.exitFullscreen().catch(function(){}); }catch(e){}
-  if(streamCamara){ streamCamara.getTracks().forEach(t=>t.stop()); streamCamara=null; }
+  if(streamCamara){ streamCamara.getTracks().forEach(function(t){ t.stop(); }); streamCamara=null; }
   const video=document.getElementById('camaraVideo');
   if(video){ try{ video.pause(); video.srcObject=null; }catch(e){} }
   const msg=document.getElementById('scannerMensaje');
@@ -560,17 +726,36 @@ document.addEventListener('fullscreenchange',function(){
   if(!document.fullscreenElement && escaneoActivo) detenerEscaneo(true);
 });
 async function bucleEscaneo(){
-  if(!escaneoActivo||!detectorCodigos) return;
+  if(!escaneoActivo) return;
   const video=document.getElementById('camaraVideo');
   if(video && video.readyState>=2){
-    try{
-      const codigos=await detectorCodigos.detect(video);
-      if(codigos.length){
-        const raw=codigos[0].rawValue;
-        const ahoraMs=Date.now();
-        if(raw && ahoraMs-ultimoEscaneo>1500){ ultimoEscaneo=ahoraMs; procesarCodigo(raw,true); }
-      }
-    }catch(e){}
+    // 1) Lector nativo del navegador (QR y otros formatos), si existe.
+    if(detectorCodigos){
+      try{
+        const codigos=await detectorCodigos.detect(video);
+        if(codigos.length){
+          const raw=codigos[0].rawValue;
+          const ahoraMs=Date.now();
+          if(raw && ahoraMs-ultimoEscaneo>1500){ ultimoEscaneo=ahoraMs; procesarCodigo(raw,true); }
+        }
+      }catch(e){}
+    }
+    // 2) Lector interno Code128 sobre el cuadro de video (funciona en PC sin BarcodeDetector).
+    const ahora=Date.now();
+    if(ahora-ultimoAnalisisInterno>220){
+      ultimoAnalisisInterno=ahora;
+      try{
+        if(!canvasEscaneo) canvasEscaneo=document.createElement('canvas');
+        const vw=video.videoWidth||640, vh=video.videoHeight||480;
+        const escala=Math.min(1,520/vw);
+        canvasEscaneo.width=Math.max(1,Math.round(vw*escala));
+        canvasEscaneo.height=Math.max(1,Math.round(vh*escala));
+        const ctx=canvasEscaneo.getContext('2d',{willReadFrequently:true});
+        ctx.drawImage(video,0,0,canvasEscaneo.width,canvasEscaneo.height);
+        const codigo=leerCode128DesdeCanvas(canvasEscaneo);
+        if(codigo && Date.now()-ultimoEscaneo>1500){ ultimoEscaneo=Date.now(); procesarCodigo(codigo,true); }
+      }catch(e){}
+    }
   }
   if(escaneoActivo) requestAnimationFrame(bucleEscaneo);
 }

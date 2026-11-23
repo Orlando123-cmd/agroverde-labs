@@ -470,6 +470,11 @@ tbody tr:last-child td{border-bottom:0}
 .alerta-texto small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
 
 /* ---------- Escáner ---------- */
+.camara-controles{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px}
+.camara-controles label{flex:1 1 220px;margin:0;min-width:0}
+.camara-controles select{min-width:0;width:100%}
+.camara-controles .btn{flex:0 0 auto;margin:0}
+#estadoCamaras{margin:0 0 12px}
 .scanner-box{
   position:relative;width:100%;aspect-ratio:16/9;max-height:340px;overflow:hidden;border-radius:var(--r-sm);
   background:#0a1a14;display:grid;place-items:center;border:1px solid #244235
@@ -512,6 +517,7 @@ tbody tr:last-child td{border-bottom:0}
   .alerta-item .btn{margin-left:46px}
   .alerta-icono{width:32px;height:32px;flex-basis:32px}
   .scanner-box{max-height:250px}
+  .camara-controles .btn{width:100%}
   .acciones-tabla .btn{flex:1 1 auto}
 }
 
