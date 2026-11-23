@@ -653,7 +653,7 @@ tbody tr:last-child td{border-bottom:0}
 
 /* ---------- Tour guiado ---------- */
 body.tour-abierto{overflow:hidden}
-.tour-overlay{position:fixed;inset:0;z-index:120;pointer-events:none;background:rgba(8,30,22,.28)}
+.tour-overlay{position:fixed;inset:0;z-index:120;pointer-events:auto;background:rgba(8,30,22,.35);touch-action:manipulation}
 .tour-overlay.hidden{display:none!important}
 .tour-resaltado{
   position:relative!important;z-index:121!important;

@@ -2052,6 +2052,7 @@ function iniciarTour(manual){
   ov.classList.remove('hidden');
   document.body.classList.add('tour-abierto');
   ir(tourPasos[0].modulo);
+  window.scrollTo(0,0);
   requestAnimationFrame(mostrarPasoTour);
 }
 function mostrarPasoTour(){
@@ -2072,8 +2073,9 @@ function mostrarPasoTour(){
   const sig=document.getElementById('tourSiguiente');
   if(sig) sig.textContent=tourPaso===tourPasos.length-1?'Terminar ✓':'Siguiente →';
   document.querySelectorAll('.tour-resaltado').forEach(function(el){ el.classList.remove('tour-resaltado'); });
+  window.scrollTo(0,0);
   const movil=window.matchMedia && matchMedia('(max-width:600px)').matches;
-  let destino=movil?document.getElementById('contenido'):document.getElementById('nav-'+p.modulo);
+  let destino=movil?(document.querySelector('#contenido>h2')||document.getElementById('contenido')):document.getElementById('nav-'+p.modulo);
   if(!destino) destino=document.getElementById('contenido');
   if(destino) destino.classList.add('tour-resaltado');
   const globo=document.getElementById('tourGlobo');
@@ -2098,9 +2100,11 @@ function pasoTour(delta){
   if(siguiente<0) return;
   tourPaso=siguiente;
   ir(tourPasos[tourPaso].modulo);
+  window.scrollTo(0,0);
   requestAnimationFrame(mostrarPasoTour);
 }
-function cerrarTour(){
+function cerrarTour(e){
+  if(e && e.target && e.target.id!=='tourOverlay') return;
   const ov=document.getElementById('tourOverlay');
   const estabaAbierto=ov && !ov.classList.contains('hidden');
   if(ov) ov.classList.add('hidden');
@@ -2108,6 +2112,12 @@ function cerrarTour(){
   document.body.classList.remove('tour-abierto');
   if(estabaAbierto) marcarTourVisto();
 }
+function recolocarTour(){
+  const ov=document.getElementById('tourOverlay');
+  if(ov && !ov.classList.contains('hidden')) requestAnimationFrame(mostrarPasoTour);
+}
+window.addEventListener('resize',recolocarTour);
+window.addEventListener('orientationchange',recolocarTour);
 
 /* ============================================================
    Buscador global (Ctrl+K / ⌘K): módulos, glosario y lotes.
