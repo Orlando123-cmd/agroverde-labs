@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b6b3a">
+<meta name="theme-color" content="#0d5c43">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,33 +15,76 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<!-- ===================== LOGIN ===================== -->
 <div id="login" class="login-wrap">
-  <div class="login-card">
-    <div class="brand">🌱 AgroVerde <span>S.A.C.</span></div>
-    <h1>Sistema de Trazabilidad de Lotes</h1>
-    <p class="sub">Modelado y Desarrollo de Aplicaciones · CIIN1322P</p>
-    <form onsubmit="iniciarSesion(event)">
-      <label>Usuario <input id="usr" required autocomplete="username" placeholder="operario1"></label>
-      <label>Contraseña <input id="pass" type="password" required autocomplete="current-password" placeholder="op123"></label>
-      <button class="btn primary big" type="submit">Ingresar</button>
-    </form>
-    <div class="hint"><b>Usuarios de prueba</b><br>operario1 / op123 · jefe1 / jefe123 · almacen1 / alm123<br>rrhh1 / rrhh123 · gerencia1 / ger123 · admin1 / admin123</div>
-  </div>
+  <section class="login-visual">
+    <div class="visual-brand"><span class="mark">🌱</span> AgroVerde <span style="font-weight:400;opacity:.75">S.A.C.</span></div>
+    <div class="visual-copy">
+      <div class="eyebrow">Sistema integrado de gestión</div>
+      <h1>Trazabilidad<br>de lotes</h1>
+      <p>Control de producción, almacén, exportación y datos de personal en una sola plataforma, incluso sin conexión.</p>
+      <div class="visual-features">
+        <div class="visual-feature"><span class="tick">✓</span><span>Registro offline con sincronización posterior</span></div>
+        <div class="visual-feature"><span class="tick">✓</span><span>Stock, conciliación y documentos de exportación</span></div>
+        <div class="visual-feature"><span class="tick">✓</span><span>Consentimiento de datos y auditoría completa</span></div>
+      </div>
+    </div>
+    <div class="visual-footer">Modelado y Desarrollo de Aplicaciones · CIIN1322P · Universidad Privada del Norte</div>
+  </section>
+
+  <section class="login-panel">
+    <div class="login-card">
+      <div class="brand">🌱 AgroVerde <span>S.A.C.</span></div>
+      <div class="login-head">
+        <div class="eyebrow">Acceso al sistema</div>
+        <h1>Iniciar sesión</h1>
+        <p class="sub">Ingrese sus credenciales para continuar</p>
+      </div>
+      <form onsubmit="iniciarSesion(event)">
+        <div class="field">
+          <label for="usr">Usuario</label>
+          <div class="input-wrap"><span class="ico">👤</span><input id="usr" required autocomplete="username" placeholder="admin1"></div>
+        </div>
+        <div class="field" style="margin-bottom:22px">
+          <label for="pass">Contraseña</label>
+          <div class="input-wrap"><span class="ico">🔒</span><input id="pass" type="password" required autocomplete="current-password" placeholder="••••••••"></div>
+        </div>
+        <button class="btn primary big" type="submit">Ingresar al sistema →</button>
+      </form>
+      <div class="credentials">
+        <b>Usuarios de demostración</b>
+        <code>admin1 / admin123</code> · administrador<br>
+        <code>operario1 / op123</code> · producción<br>
+        <code>jefe1 / jefe123</code> · validación<br>
+        <code>almacen1 / alm123</code> · almacén<br>
+        <code>rrhh1 / rrhh123</code> · RRHH · <code>gerencia1 / ger123</code> · gerencia
+      </div>
+      <div class="hint">Si aparece «Sin conexión», use un usuario ya ingresado en este dispositivo: las credenciales quedan en caché (RN06).</div>
+    </div>
+  </section>
 </div>
 
+<!-- ===================== APP ===================== -->
 <div id="app" class="app hidden">
-  <header>
-    <div class="brand">🌱 AgroVerde <span>S.A.C.</span></div>
-    <div class="head-right">
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="logo-mark">🌱</span>
+      <span><strong>AgroVerde S.A.C.</strong><small>Trazabilidad de lotes</small></span>
+    </div>
+    <div class="topbar-actions">
       <button id="btnModo" class="btn" onclick="cambiarModo()">🌐 En línea</button>
       <span id="badgeUsuario" class="badge"></span>
       <button class="btn ghost" onclick="cerrarSesion()">Salir</button>
     </div>
   </header>
   <div class="layout">
-    <nav id="menu"></nav>
+    <div class="sidebar">
+      <div class="sidebar-title">Módulos</div>
+      <nav id="menu"></nav>
+    </div>
     <main>
-      <div id="bannerOffline" class="banner hidden">⚠️ Modo offline activo — los registros quedan como <b>Pendiente de sincronización</b> con fecha y hora de captura.</div>
+      <div id="bannerOffline" class="banner hidden">⚠️ <b>Modo offline activo.</b> Los registros quedan como <b>Pendiente de sincronización</b> con fecha y hora de captura (RF02 / RN06).</div>
       <div id="contenido"></div>
     </main>
   </div>
@@ -50,10 +93,11 @@
 <div id="toast" class="toast hidden"></div>
 <div id="modal" class="modal hidden" onclick="cerrarModal(event)">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="close" onclick="cerrarModal()">✕</button>
+    <button class="close" onclick="cerrarModal()" aria-label="Cerrar">✕</button>
     <div id="modalBody"></div>
   </div>
 </div>
+
 <script src="app.js"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

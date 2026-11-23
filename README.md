@@ -12,6 +12,9 @@ Los datos se guardan en `localStorage` del navegador (`agroverde_db_v1`). El bot
 
 ## Instalar como app en el celular (PWA)
 
+**Link ya publicado (GitHub Pages):** `https://orlando123-cmd.github.io/agroverde-labs/`
+Ábrelo en el celular e instálalo (pasos abajo). No necesitas publicar nada más.
+
 Para que el celular la instale con ícono propio y la abra como app (pantalla completa, sin barra del navegador y con caché offline), la app debe servirse por **HTTPS**. El ZIP ya incluye `manifest.webmanifest`, `sw.js` e íconos; solo falta publicarla:
 
 1. **Publicar gratis** (elige una):
