@@ -134,7 +134,7 @@ const CONCEPTOS_AGROVERDE = [
    funciones:['Explicar módulos y responder dudas del turno.','Buscar lotes por código y abrir el módulo correcto.','Usar IA local del navegador si funciona, o reglas locales si no.','Escribir la respuesta progresivamente y nunca pedir claves ni datos personales.'],
    donde:'Botón flotante 💬 «Abrir asistente» abajo a la derecha.',
    modulo:null, boton:null, responsable:'Todos los roles'},
-  {titulo:'Diseño móvil', claves:/movil|celular|barra inferior|menu mas|pantalla completa/,
+  {titulo:'Diseño móvil', claves:/movil|celular|barra inferior|menu mas|menu|más|pantalla completa|tocar|boton|botón/,
    que:'Es la interfaz adaptada para trabajar con el celular en el campo.',
    funciones:['Barra inferior con los módulos más usados.','Botón «Más» con los 14 módulos.','Tablas convertidas en tarjetas y campos táctiles grandes.','Cámara a pantalla completa con botón ✕ Salir.'],
    donde:'Toda la app al abrirla en un celular; se refleja en el menú inferior.',
@@ -1630,13 +1630,13 @@ function responderAsistente(t,escribir){
   } else if(/gracias/.test(q)){
     r='¡Con gusto! Si te surge otra duda en el turno, aquí estoy. 🌱';
   } else {
-    r='No estoy seguro de entender. Puedo ayudarte con registro de lotes, escáner, modo offline, validación, stock, RRHH o trazabilidad. Elige una opción o escribe <b>LOTE-2026-001</b> para consultar un lote. '+accion('cierre','Registrar lote')+' '+accion('offline','Modo offline');
+    const permitidos=MODULOS_INFO.filter(function(m){ return !m.id||tiene(m.id); });
+    const botones=permitidos.map(function(m){ return accion(m.id,m.icono+' '+m.label); }).join(' ');
+    r='Puedo ayudarte con estos módulos. Elige uno y te explico <b>qué es</b>, sus <b>funciones</b> y <b>dónde está</b>:<br>'+botones+
+      '<br><br>También puedes escribir <b>LOTE-2026-001</b> para consultar un lote o preguntar, por ejemplo, <b>¿qué es un lote?</b>.';
   }
   const concepto=(!codigo&&!/gracias/.test(q))?buscarConcepto(t):null;
-  if(concepto){
-    if(r.indexOf('No estoy seguro de entender')===0) r='';
-    r+=textoConcepto(concepto,accion,r.indexOf('chat-action')>=0,r.length>0);
-  }
+  if(concepto) r+=textoConcepto(concepto,accion,r.indexOf('chat-action')>=0,r.length>0);
   mostrarRespuestaAsistente(r,escribir);
 }
 function mostrarRespuestaAsistente(html,escribir){
