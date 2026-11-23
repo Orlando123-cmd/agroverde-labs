@@ -65,6 +65,7 @@ let iaEstado = 'comprobando';
 let iaVerificando = false;
 let iaActivando = null;
 let iaUltimoError = '';
+let iaSinModeloReal = false;
 
 /* ---------- Persistencia y semilla ---------- */
 function semilla(){
@@ -1184,6 +1185,7 @@ function actualizarEstadoIA(estado,texto){
 }
 async function verificarIA(){
   if(iaSesion){ actualizarEstadoIA('activa','IA local activa · respuestas en tiempo real'); return true; }
+  if(iaSinModeloReal){ actualizarEstadoIA('no','Asistente por reglas · este navegador solo repite texto'); return false; }
   if(iaVerificando) return false;
   iaVerificando=true;
   actualizarEstadoIA('comprobando','Ayuda · comprobando IA local…');
@@ -1249,6 +1251,28 @@ function extraerTextoIA(r){
   if(r && r.response!==undefined) return extraerTextoIA(r.response);
   return '';
 }
+/* Algunos Chromium/Electron exponen LanguageModel, pero solo repiten el texto
+   que reciben. Detectamos ese eco para no mostrar la pregunta como "respuesta". */
+function esRespuestaEcoIA(texto,marcador){
+  const t=String(texto||'');
+  if(/On-device model is not available|just echoing back the input|not available in Chromium/i.test(t)) return true;
+  if(/Contexto de este dispositivo|Pregunta del trabajador:/i.test(t)) return true;
+  if(marcador && t.indexOf(marcador)>=0 && t.replace(marcador,'').replace(/\s/g,'').length>12) return true;
+  return false;
+}
+async function verificarModeloReal(sesion){
+  if(!sesion || typeof sesion.prompt!=='function') return true;
+  const marcador='AGROVERDE_PRUEBA_'+Math.random().toString(36).slice(2,8).toUpperCase();
+  try{
+    const r=extraerTextoIA(await sesion.prompt('Responde solo con OK. Marcador: '+marcador));
+    return !esRespuestaEcoIA(r,marcador);
+  }catch(e){ return true; }
+}
+function textoDesdeHtml(html){
+  const d=document.createElement('div');
+  d.innerHTML=String(html||'');
+  return d.textContent||'';
+}
 async function leerStreamIA(stream,alTrozo){
   let texto='';
   const anadir=function(x){ const s=textoTrozoIA(x); if(s){ texto+=s; alTrozo(s,texto); } };
@@ -1273,6 +1297,11 @@ async function activarIALocal(silencioso){
     if(!silencioso) mensajeAsistente('La <b>IA local ya está activa</b>. Puedes escribir tu pregunta.','bot');
     return true;
   }
+  if(iaSinModeloReal){
+    actualizarEstadoIA('no','Asistente por reglas · IA local no funcional');
+    if(!silencioso) toast('Este navegador solo repite texto; se usan respuestas por reglas.');
+    return false;
+  }
   if(iaActivando) return iaActivando;
   const api=iaApi||apiIA();
   if(!api){
@@ -1294,7 +1323,20 @@ async function activarIALocal(silencioso){
           });
         };
       }
-      iaSesion=await api.create(opciones);
+      const candidata=await api.create(opciones);
+      const esReal=await verificarModeloReal(candidata);
+      if(!esReal){
+        try{ if(candidata && typeof candidata.destroy==='function') candidata.destroy(); }catch(e){}
+        iaSinModeloReal=true; iaSesion=null;
+        iaUltimoError='Este navegador expone la API pero solo repite el texto de entrada.';
+        actualizarEstadoIA('no','Asistente por reglas · IA local no funcional');
+        if(!silencioso){
+          mensajeAsistente('Este navegador tiene una API de IA que solo repite el texto, así que no da respuestas reales. Volví al <b>asistente local de la app</b>, que sí responde y escribe progresivamente.','bot');
+          toast('IA local del navegador no funcional. Se usan respuestas por reglas.');
+        }
+        return false;
+      }
+      iaSesion=candidata;
       actualizarEstadoIA('activa','IA local activa · respuestas en tiempo real');
       if(!silencioso) mensajeAsistente('✅ <b>IA local activada.</b> Tus preguntas se responden aquí mismo, sin internet ni clave. Verás la respuesta mientras se escribe.','bot');
       return true;
@@ -1329,6 +1371,10 @@ async function responderConIA(pregunta){
       if(texto) alTrozo('',texto);
     }else throw new Error('La sesión de IA no tiene método de respuesta.');
     if(!texto.trim()) throw new Error('La IA local devolvió una respuesta vacía.');
+    if(esRespuestaEcoIA(texto,prompt)){
+      iaSinModeloReal=true;
+      throw new Error('El modelo local solo repite el texto de entrada.');
+    }
     burbuja.classList.remove('escribiendo');
     burbuja.innerHTML=formatearIA(texto);
     if(chat) chat.scrollTop=chat.scrollHeight;
@@ -1336,9 +1382,12 @@ async function responderConIA(pregunta){
   }catch(err){
     iaUltimoError=(err&&err.message)?err.message:String(err);
     if(burbuja.parentNode) burbuja.parentNode.removeChild(burbuja);
+    try{ if(iaSesion && typeof iaSesion.destroy==='function') iaSesion.destroy(); }catch(e){}
     iaSesion=null;
-    actualizarEstadoIA('no','IA local interrumpida · respuestas por reglas');
-    responderAsistente(pregunta);
+    actualizarEstadoIA('no',iaSinModeloReal
+      ?'Asistente por reglas · IA local no funcional'
+      :'IA local interrumpida · respuestas por reglas');
+    responderAsistente(pregunta,true);
     return false;
   }
 }
@@ -1349,7 +1398,7 @@ async function despacharAsistente(t){
     const ok=await activarIALocal(true);
     if(ok) return responderConIA(t);
   }
-  setTimeout(function(){ responderAsistente(t); },180);
+  setTimeout(function(){ responderAsistente(t,true); },180);
 }
 function toggleAsistente(){
   const panel=document.getElementById('asistentePanel');
@@ -1387,7 +1436,7 @@ function preguntaRapida(t){
   mensajeAsistente(t,'user');
   despacharAsistente(t);
 }
-function responderAsistente(t){
+function responderAsistente(t,escribir){
   const q=t.toLowerCase();
   const accion=function(id,label){ return '<button class="chat-action" onclick="ir(\''+id+'\');toggleAsistente()">'+label+' →</button>'; };
   const codigo=(t.match(/LOTE-[\w-]+/i)||[])[0];
@@ -1408,7 +1457,7 @@ function responderAsistente(t){
     r=tiene('escanear')
       ? 'Abre el <b>Escáner de lote</b> y apunta la cámara al QR o código de barras. Si tu equipo no lo soporta, usa la captura manual. '+accion('escanear','Abrir escáner')
       : 'El escáner está disponible para Producción y Almacén. Puedes buscar el lote escribiendo su código. '+accion('consulta','Ir a Consulta');
-  } else if(/registrar|cerrar|registro de cierre|captura|nuevo lote/.test(q)){
+  } else if(/registrar|registro un lote|registro de lote|registro de cierre|cerrar|captura|nuevo lote|cómo registro|como registro/.test(q)){
     r=actual&&actual.rol==='Operario de producción'
       ? 'Para registrar, llena <b>línea, fecha, cantidad y turno</b> en Registro de cierre. Como operario solo puedes cerrar lotes de tu línea <b>'+esc(actual.linea)+'</b> (RN07). '+accion('cierre','Registrar cierre')
       : 'En <b>Registro de cierre</b> capturas línea, fecha, cantidad y turno. El código se genera solo y el estado queda <b>Registrado</b> hasta que el Jefe valide (CU01). '+accion('cierre','Registrar cierre');
@@ -1448,12 +1497,33 @@ function responderAsistente(t){
     r='Resumen de este dispositivo: <b>'+db.lotes.length+'</b> lote(s), <b>'+validados+'</b> validado(s), <b>'+pend+'</b> pendiente(s) de sincronización y <b>'+Object.keys(db.stock).length+'</b> lote(s) con stock. '+accion('inicio','Ver panel');
   } else if(/buscar|consulta|busca|estado|consultar/.test(q)){
     r='Puedes buscar por <b>código, línea o fecha</b> y la consulta muestra si cumple el objetivo de 3 segundos (RNF05). Escribe por ejemplo <b>LOTE-2026-001</b> o usa el escáner. '+accion('consulta','Ir a Consulta');
+  } else if(/\b(ia|i\.a\.)\b|inteligencia artificial|gemini nano|modelo local/.test(q)){
+    r='La IA depende del navegador. Si el modelo local no está disponible o solo repite texto, uso mis <b>reglas locales</b> y escribo la respuesta progresivamente. No hay clave ni servicio externo. '+accion('inicio','Volver al inicio');
   } else if(/gracias/.test(q)){
     r='¡Con gusto! Si te surge otra duda en el turno, aquí estoy. 🌱';
   } else {
     r='No estoy seguro de entender. Puedo ayudarte con registro de lotes, escáner, modo offline, validación, stock, RRHH o trazabilidad. Elige una opción o escribe <b>LOTE-2026-001</b> para consultar un lote. '+accion('cierre','Registrar lote')+' '+accion('offline','Modo offline');
   }
-  mensajeAsistente(r,'bot');
+  mostrarRespuestaAsistente(r,escribir);
+}
+function mostrarRespuestaAsistente(html,escribir){
+  if(!escribir){ mensajeAsistente(html,'bot'); return; }
+  const chat=document.getElementById('asistenteChat');
+  const burbuja=mensajeAsistente('','bot',true);
+  const plano=textoDesdeHtml(html);
+  let i=0;
+  const paso=Math.max(2,Math.ceil(plano.length/55));
+  const timer=setInterval(function(){
+    i=Math.min(plano.length,i+paso);
+    burbuja.textContent=plano.slice(0,i);
+    if(chat) chat.scrollTop=chat.scrollHeight;
+    if(i>=plano.length){
+      clearInterval(timer);
+      burbuja.classList.remove('escribiendo');
+      burbuja.innerHTML=html;
+      if(chat) chat.scrollTop=chat.scrollHeight;
+    }
+  },28);
 }
 
 /* ---------- Cierre automático por inactividad ---------- */
