@@ -90,6 +90,29 @@
   </div>
 </div>
 
+<!-- ============ ASISTENTE VIRTUAL ============ -->
+<div id="asistente" class="asistente hidden">
+  <div id="asistentePanel" class="asistente-panel hidden">
+    <div class="asistente-head">
+      <div class="asistente-avatar">🤖</div>
+      <div><strong>Asistente AgroVerde</strong><small>Ayuda para el personal · en línea</small></div>
+      <button class="asistente-close" onclick="toggleAsistente()" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="asistenteChat" class="asistente-chat"></div>
+    <div class="asistente-quick">
+      <button onclick="preguntaRapida('¿Cómo registro un lote?')">Registrar lote</button>
+      <button onclick="preguntaRapida('¿Qué hago si no hay señal?')">Sin señal</button>
+      <button onclick="preguntaRapida('¿Quién valida los lotes?')">Validación</button>
+      <button onclick="preguntaRapida('Ver resumen')">Resumen</button>
+    </div>
+    <form class="asistente-form" onsubmit="enviarAsistente(event)">
+      <input id="asistenteInput" autocomplete="off" placeholder="Escribe tu pregunta…" aria-label="Mensaje para el asistente">
+      <button type="submit" aria-label="Enviar">➤</button>
+    </form>
+  </div>
+  <button id="asistenteFab" class="asistente-fab" onclick="toggleAsistente()" aria-label="Abrir asistente">💬</button>
+</div>
+
 <div id="toast" class="toast hidden"></div>
 <div id="modal" class="modal hidden" onclick="cerrarModal(event)">
   <div class="modal-box" onclick="event.stopPropagation()">

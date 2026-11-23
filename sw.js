@@ -1,6 +1,6 @@
 /* AgroVerde PWA — service worker: red primero, copia local sin conexión.
    Así las actualizaciones se ven en cuanto hay internet. */
-const CACHE = 'agroverde-v3';
+const CACHE = 'agroverde-v4';
 const SHELL = [
   './',
   './index.html',

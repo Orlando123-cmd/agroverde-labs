@@ -54,6 +54,7 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 | Trazabilidad | RF09, CU08 | Reporte por lote con todos sus eventos, imprimible |
 | Agua y mermas | RF10, CU09 | Registra consumo de agua y mermas por lote |
 | Auditoría | CL06 | Registra cada acción con usuario, fecha y detalle |
+| Asistente virtual | Apoyo a RNF04 | Chat flotante que guía al personal por puesto, responde dudas y busca lotes por código. Usa reglas locales: no necesita internet ni API externa |
 
 ## Estructura del ZIP
 

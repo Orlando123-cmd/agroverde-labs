@@ -86,7 +86,7 @@ function iniciarSesion(e){
   actual={usuario:user.usuario,nombre:user.nombre,rol:user.rol,linea:user.linea||'—'};
   db.session=actual; aud('Inicio de sesión', actual.rol+(db.modoOffline?' (offline RN06)':'')); guardarDB(); renderApp();
 }
-function cerrarSesion(){ aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null; document.getElementById('app').classList.add('hidden'); document.getElementById('login').classList.remove('hidden'); }
+function cerrarSesion(){ aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null; document.getElementById('app').classList.add('hidden'); document.getElementById('login').classList.remove('hidden'); document.getElementById('asistente').classList.add('hidden'); }
 function cambiarModo(){ db.modoOffline=!db.modoOffline; aud('Cambio de conectividad', db.modoOffline?'Modo offline activo':'Modo en línea activo'); guardarDB(); actualizarCabecera(); ir(moduloActual); toast(db.modoOffline?'Modo offline: los registros quedarán pendientes.':'Modo en línea restablecido.'); }
 function actualizarCabecera(){
   document.getElementById('btnModo').textContent=db.modoOffline?'📴 Sin conexión':'🌐 En línea';
@@ -96,6 +96,7 @@ function actualizarCabecera(){
 function renderApp(){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
+  document.getElementById('asistente').classList.remove('hidden');
   actualizarCabecera();
   document.getElementById('menu').innerHTML=MODULOS_INFO.filter(m=>tiene(m.id))
     .map(m=>`<button id="nav-${m.id}" onclick="ir('${m.id}')">${m.icono} ${m.label}</button>`).join('');
@@ -325,6 +326,97 @@ function vAuditoria(){
   <div class="card"><button class="btn warn" onclick="restablecer()">Restablecer datos de prueba</button></div>`;
 }
 function restablecer(){ if(!confirm('¿Restablecer la base de datos a los datos semilla?')) return; db=semilla(); db.session=actual; guardarDB(); ir('inicio'); toast('Datos restablecidos.'); }
+
+/* ---------- Asistente virtual (reglas locales, sin internet) ---------- */
+function toggleAsistente(){
+  const panel=document.getElementById('asistentePanel');
+  const abrir=panel.classList.contains('hidden');
+  panel.classList.toggle('hidden',!abrir);
+  if(abrir){
+    const chat=document.getElementById('asistenteChat');
+    if(!chat.innerHTML){
+      mensajeAsistente(`¡Hola${actual?' '+esc(actual.nombre.split(' ')[0]):''}! Soy el <b>asistente AgroVerde</b>. Puedo ayudarte a registrar lotes, trabajar sin señal, validar, consultar stock o explicar un módulo. Escribe tu pregunta o toca una opción rápida.`,'bot');
+    }
+    setTimeout(function(){ document.getElementById('asistenteInput').focus(); },120);
+  }
+}
+function mensajeAsistente(texto,quien){
+  const b=document.createElement('div');
+  b.className='chat-bubble '+(quien==='user'?'user':'bot');
+  b.innerHTML=quien==='user'?esc(texto):texto;
+  const chat=document.getElementById('asistenteChat');
+  chat.appendChild(b);
+  chat.scrollTop=chat.scrollHeight;
+}
+function enviarAsistente(e){
+  e.preventDefault();
+  const t=val('asistenteInput');
+  if(!t) return;
+  document.getElementById('asistenteInput').value='';
+  mensajeAsistente(t,'user');
+  setTimeout(function(){ responderAsistente(t); },220);
+}
+function preguntaRapida(t){
+  if(document.getElementById('asistentePanel').classList.contains('hidden')) toggleAsistente();
+  mensajeAsistente(t,'user');
+  responderAsistente(t);
+}
+function responderAsistente(t){
+  const q=t.toLowerCase();
+  const accion=function(id,label){ return '<button class="chat-action" onclick="ir(\''+id+'\');toggleAsistente()">'+label+' →</button>'; };
+  const codigo=(t.match(/LOTE-[\w-]+/i)||[])[0];
+  let r='';
+
+  if(/hola|buenas|buen dia|buen día|ayuda|quién eres|quien eres|qué puedes hacer|que puedes hacer/.test(q)){
+    r='Estoy aquí para guiarte en tu turno. Puedo ayudarte con: <b>registro de lotes</b>, <b>modo offline</b>, <b>validación</b>, <b>stock</b>, <b>conciliación</b>, <b>RRHH</b>, <b>documentos</b> y <b>trazabilidad</b>. '+accion('inicio','Ver panel de inicio');
+  } else if(codigo){
+    const l=db.lotes.find(function(x){ return x.codigo.toLowerCase()===codigo.toLowerCase(); });
+    if(l){
+      r='Encontré el lote <b>'+esc(l.codigo)+'</b>: línea '+esc(l.linea)+', fecha '+esc(l.fecha)+', cantidad '+l.cantidad+' und, estado <b>'+esc(l.estado)+'</b>, ubicación: '+esc(l.ubicacion)+'. Sincronización: '+esc(l.sync)+'. '+accion('consulta','Ver en Consulta');
+    } else {
+      r='No encontré el lote <b>'+esc(codigo)+'</b> en este dispositivo. Revisa el código o busca por línea/fecha. '+accion('consulta','Ir a Consulta');
+    }
+  } else if(/no hay señal|sin señal|sin cobertura|offline|sin conexion|sin conexión|sincroniz|pendiente/.test(q)){
+    r='Si estás en el campo sin señal, activa <b>Sin conexión</b>. El cierre se guarda como <b>Pendiente de sincronización con fecha y hora</b> (RF02). Las credenciales ya usadas quedan en caché (RN06). Al volver a tener señal, toca <b>Sincronizar</b>. '+accion('offline','Ir a Modo offline');
+  } else if(/registrar|cerrar|registro de cierre|captura|nuevo lote/.test(q)){
+    r=actual&&actual.rol==='Operario de producción'
+      ? 'Para registrar, llena <b>línea, fecha, cantidad y turno</b> en Registro de cierre. Como operario solo puedes cerrar lotes de tu línea <b>'+esc(actual.linea)+'</b> (RN07). '+accion('cierre','Registrar cierre')
+      : 'En <b>Registro de cierre</b> capturas línea, fecha, cantidad y turno. El código se genera solo y el estado queda <b>Registrado</b> hasta que el Jefe valide (CU01). '+accion('cierre','Registrar cierre');
+  } else if(/valid|jefe|aprob|autoriz/.test(q)){
+    r=tiene('validar')
+      ? 'Como <b>'+esc(actual.rol)+'</b> puedes validar lotes: eso cambia el estado a <b>Validado</b> (RN03). Solo los lotes validados generan documentos (RN04). '+accion('validar','Ir a Validación')
+      : 'La validación la hace el <b>Jefe de producción</b> o el administrador (RN03). Tu rol registra o consulta, pero no aprueba lotes. '+accion('consulta','Consultar lotes');
+  } else if(/stock|almacen|almacén|ingreso|movimiento/.test(q)){
+    const total=Object.values(db.stock).reduce(function(a,b){return a+b;},0);
+    r='Hay <b>'+total.toLocaleString('es-PE')+'</b> unidades en stock. En <b>Ingreso y stock</b> registras el movimiento y se actualiza automáticamente (RF04). '+accion('ingreso','Ir a Ingreso y stock');
+  } else if(/concili|diferencia|pedido|comprometid/.test(q)){
+    r='La <b>Conciliación</b> compara el stock contra los pedidos comprometidos. Si hay diferencia física, regístrala con <b>motivo y responsable</b> (RN08 / CU05a). '+accion('conciliacion','Ir a Conciliación');
+  } else if(/trabajador|consentimiento|rrhh|legajo|bloquead|datos personal|datos del personal/.test(q)){
+    const bloqueados=db.trabajadores.filter(function(x){return x.estado.indexOf('BLOQUEADO')===0;}).length;
+    r='En <b>Datos y consentimiento</b> se registran los trabajadores. Sin consentimiento vigente el legajo queda <b>BLOQUEADO</b> (RF11 / RN09). Actualmente hay <b>'+bloqueados+'</b> legajo(s) bloqueado(s). '+accion('personal','Ir a Datos y consentimiento');
+  } else if(/documento|factura|packing|exporta/.test(q)){
+    r='En <b>Documentos</b> generas factura y packing list. Recuerda: solo se pueden emitir para lotes <b>Validados</b> (RN04) y se pueden imprimir. '+accion('documentos','Ir a Documentos');
+  } else if(/trazab|reporte|historial|rastre/.test(q)){
+    r='El reporte de <b>Trazabilidad</b> muestra la línea de tiempo de un lote: cierre, ingreso, conciliación, agua/mermas y documentos (RF09 / CU08). '+accion('trazabilidad','Ir a Trazabilidad');
+  } else if(/agua|merma|ambient|consumo/.test(q)){
+    r='En <b>Agua y mermas</b> registras litros y kilogramos por lote (RF10 / CU09). Ese dato aparece después en el reporte de trazabilidad. '+accion('consumo','Ir a Agua y mermas');
+  } else if(/auditor|quién hizo|quien hizo|cambio|registro de actividad/.test(q)){
+    r='La <b>Auditoría</b> guarda cada acción con usuario y fecha (CL06 / RN10). Podrás ver quién registró, validó o cambió algo. '+accion('auditoria','Ir a Auditoría');
+  } else if(/contraseña|password|clave|usuario|ingresar|login/.test(q)){
+    r='En la pantalla de acceso solo mostramos el <b>usuario por puesto</b>; cada persona conoce su contraseña. Si estás sin señal, usa un usuario ya ingresado en este dispositivo (RN06). El usuario de sistema es <b>admin1</b>.';
+  } else if(/resumen|cuantos|cuántos|estado general|cuánto/.test(q)){
+    const validados=db.lotes.filter(function(l){return l.estado==='Validado';}).length;
+    const pend=db.lotes.filter(function(l){return l.sync.indexOf('Pendiente')===0;}).length;
+    r='Resumen de este dispositivo: <b>'+db.lotes.length+'</b> lote(s), <b>'+validados+'</b> validado(s), <b>'+pend+'</b> pendiente(s) de sincronización y <b>'+Object.keys(db.stock).length+'</b> lote(s) con stock. '+accion('inicio','Ver panel');
+  } else if(/buscar|consulta|busca|estado|consultar/.test(q)){
+    r='Puedes buscar por <b>código, línea o fecha</b> y la consulta muestra si cumple el objetivo de 3 segundos (RNF05). Escribe por ejemplo <b>LOTE-2026-001</b>. '+accion('consulta','Ir a Consulta');
+  } else if(/gracias/.test(q)){
+    r='¡Con gusto! Si te surge otra duda en el turno, aquí estoy. 🌱';
+  } else {
+    r='No estoy seguro de entender. Puedo ayudarte con registro de lotes, modo offline, validación, stock, RRHH o trazabilidad. Elige una opción o escribe <b>LOTE-2026-001</b> para consultar un lote. '+accion('cierre','Registrar lote')+' '+accion('offline','Modo offline');
+  }
+  mensajeAsistente(r,'bot');
+}
 
 /* ---------- Arranque ---------- */
 db=cargarDB();
