@@ -156,6 +156,160 @@ const CONCEPTOS_AGROVERDE = [
    modulo:null, boton:null, responsable:'Todos los roles'}
 ];
 
+/* Opciones del recuadro de ayuda: cada tema abre preguntas concretas del turno. */
+const OPCIONES_AYUDA = {
+  'Cámara y escáner': [
+    '¿Cómo escaneo un lote con la cámara?',
+    '¿Cómo elijo la webcam en la PC?',
+    '¿Cómo escanear sin pantalla completa en la computadora?',
+    '¿Cómo uso la cámara en el celular?',
+    '¿Qué hago si el navegador no lee el código?',
+    '¿Cómo salgo de la cámara a pantalla completa?',
+    '¿Dónde está el escáner de lote?'
+  ],
+  'Código de barras': [
+    '¿Cómo genero el código de barras de un lote?',
+    '¿Cómo descargo e imprimo el código?',
+    '¿Qué es el dígito de control?',
+    '¿Cómo verifico que el código esté bien?',
+    '¿Dónde está el archivo de prueba SVG?'
+  ],
+  'Lote': [
+    '¿Qué es un lote?',
+    '¿Cómo registro un lote nuevo?',
+    '¿Cómo busco un lote?',
+    '¿Cómo valido un lote?',
+    '¿Dónde veo la trazabilidad de un lote?',
+    '¿Cómo consulto el stock de un lote?'
+  ],
+  'Registro de cierre': [
+    '¿Cómo registro el cierre de producción?',
+    '¿Qué datos debo llenar en el cierre?',
+    '¿Cómo se genera el código del lote?',
+    '¿Qué pasa si estoy sin señal al registrar?',
+    '¿Dónde está Registro de cierre?'
+  ],
+  'Validación': [
+    '¿Quién valida los lotes?',
+    '¿Cómo apruebo un lote?',
+    '¿Por qué no puedo generar documentos?',
+    '¿Qué significa estado Validado?',
+    '¿Dónde está Validar lotes?'
+  ],
+  'Modo offline y sincronización': [
+    '¿Cómo trabajo sin señal?',
+    '¿Qué son los pendientes de sincronización?',
+    '¿Cómo sincronizo al volver a tener internet?',
+    '¿Puedo ingresar sin conexión?',
+    '¿Dónde está el botón Sin conexión?'
+  ],
+  'Consulta y búsqueda': [
+    '¿Cómo busco un lote por código?',
+    '¿Puedo buscar por línea o fecha?',
+    '¿Cómo sé si la búsqueda cumple los 3 segundos?',
+    '¿Cómo descargo la consulta en CSV?',
+    '¿Dónde está Consulta y búsqueda?'
+  ],
+  'Ingreso y stock': [
+    '¿Cómo registro un ingreso?',
+    '¿Cómo veo el stock disponible?',
+    '¿Cómo hago un ajuste o devolución?',
+    '¿Cómo queda el stock después de sincronizar?',
+    '¿Dónde está Ingreso y stock?'
+  ],
+  'Conciliación': [
+    '¿Qué es la conciliación?',
+    '¿Cómo registro una diferencia física?',
+    '¿Qué hago si falta stock para un pedido?',
+    '¿Quién ve los avisos de faltantes?',
+    '¿Dónde está Conciliación?'
+  ],
+  'Datos y consentimiento': [
+    '¿Cómo doy de alta a un trabajador?',
+    '¿Qué pasa si no tiene consentimiento?',
+    '¿Cómo veo los legajos por vencer?',
+    '¿Qué datos personales se guardan?',
+    '¿Dónde está Datos y consentimiento?'
+  ],
+  'Documentos de exportación': [
+    '¿Cómo genero la factura?',
+    '¿Cómo genero el packing list?',
+    '¿Por qué no me deja emitir documentos?',
+    '¿Cómo guardo el documento en PDF?',
+    '¿Dónde está Documentos?'
+  ],
+  'Trazabilidad': [
+    '¿Cómo veo el historial de un lote?',
+    '¿Qué eventos aparecen en la trazabilidad?',
+    '¿Cómo descargo el reporte en CSV?',
+    '¿Cómo guardo el reporte en PDF?',
+    '¿Dónde está Trazabilidad?'
+  ],
+  'Agua y mermas': [
+    '¿Cómo registro el agua consumida?',
+    '¿Cómo registro la merma?',
+    '¿Cómo se asocia el dato al lote?',
+    '¿Dónde aparece después ese dato?',
+    '¿Dónde está Agua y mermas?'
+  ],
+  'Auditoría': [
+    '¿Cómo veo quién hizo un cambio?',
+    '¿Qué guarda la bitácora?',
+    '¿Cómo descargo la auditoría en CSV?',
+    '¿Cuántos eventos se conservan?',
+    '¿Dónde está Auditoría?'
+  ],
+  'Respaldos': [
+    '¿Cómo exporto un respaldo?',
+    '¿Cómo importo un respaldo en otro dispositivo?',
+    '¿Puedo pasar datos sin internet?',
+    '¿Cómo restablezco la base?',
+    '¿Dónde están los Respaldos?'
+  ],
+  'Gestión de usuarios': [
+    '¿Cómo creo un usuario?',
+    '¿Cómo cambio una clave?',
+    '¿Cómo doy de baja a un usuario?',
+    '¿Por qué no veo las contraseñas?',
+    '¿Dónde está Gestión de usuarios?'
+  ],
+  'Asistente e IA': [
+    '¿Qué puedes hacer?',
+    '¿Cómo funciona sin internet?',
+    '¿Por qué no pides contraseñas?',
+    '¿Cómo abro el asistente?',
+    '¿Dónde está el botón del asistente?'
+  ],
+  'Diseño móvil': [
+    '¿Cómo abro el menú Más en el celular?',
+    '¿Qué hay en la barra inferior?',
+    '¿Cómo uso los botones grandes?',
+    '¿Cómo salgo de la cámara en el celular?',
+    '¿Dónde está el menú móvil?'
+  ],
+  'PWA e instalación': [
+    '¿Cómo instalo la app en el celular?',
+    '¿Cómo la abro sin internet?',
+    '¿Qué es el service worker?',
+    '¿Dónde están los datos guardados?',
+    '¿Dónde está el link de la app?'
+  ],
+  'Alertas del inicio': [
+    '¿Qué avisos aparecen al entrar?',
+    '¿Cómo aviso de lotes sin validar?',
+    '¿Cómo veo consentimientos por vencer?',
+    '¿Cómo veo pedidos con stock insuficiente?',
+    '¿Dónde está Alertas del turno?'
+  ],
+  'Cierre por inactividad': [
+    '¿Por qué se cierra la sesión sola?',
+    '¿Cuándo aparece el aviso?',
+    '¿Cómo sigo trabajando?',
+    '¿Qué pasa si recargo la página?',
+    '¿Dónde se aplica el cierre?'
+  ]
+};
+
 function normalizarConcepto(s){
   let x=String(s||'').toLowerCase();
   if(String.prototype.normalize) x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -1528,15 +1682,99 @@ async function despacharAsistente(t){
   }
   setTimeout(function(){ responderAsistente(t,true); },180);
 }
+/* ---------- Recuadro de ayuda clicable dentro del chat ---------- */
+let ayudaOpcionesActuales=[];
+function accionModulo(id,label){
+  if(!id) return '';
+  return '<button class="chat-action" onclick="ir(\''+id+'\');toggleAsistente()">'+esc(label)+' →</button>';
+}
+function iconoConcepto(c){
+  const m=MODULOS_INFO.find(function(x){return x.id===c.modulo;});
+  if(m) return m.icono;
+  const fijos={'Asistente e IA':'🤖','PWA e instalación':'📲','Cierre por inactividad':'⏱️','Código de barras':'🏷️'};
+  return fijos[c.titulo]||'💬';
+}
+function ensureAyudaCard(){
+  const chat=document.getElementById('asistenteChat');
+  if(!chat||document.getElementById('ayudaCard')) return;
+  const card=document.createElement('div');
+  card.id='ayudaCard';
+  card.className='ayuda-card';
+  card.innerHTML='<div class="ayuda-card-head" onclick="toggleAyudaCard()">'+
+      '<span>🛟 ¿En qué quieres que te ayude?</span><span id="ayudaCardFlecha">▾</span>'+
+    '</div>'+
+    '<div class="ayuda-card-body" id="ayudaCardBody">'+
+      '<div class="ayuda-temas" id="ayudaTemas"></div>'+
+      '<div class="ayuda-opciones hidden" id="ayudaOpciones"></div>'+
+    '</div>';
+  chat.insertBefore(card,chat.firstChild);
+  renderAyudaTemas();
+}
+function abrirAyudaRapida(){
+  ensureAyudaCard();
+  const body=document.getElementById('ayudaCardBody');
+  const card=document.getElementById('ayudaCard');
+  if(body) body.classList.remove('hidden');
+  const flecha=document.getElementById('ayudaCardFlecha');
+  if(flecha) flecha.textContent='▾';
+  if(card && card.scrollIntoView) card.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function toggleAyudaCard(){
+  const body=document.getElementById('ayudaCardBody');
+  const flecha=document.getElementById('ayudaCardFlecha');
+  if(!body) return;
+  const oculto=body.classList.toggle('hidden');
+  if(flecha) flecha.textContent=oculto?'▸':'▾';
+}
+function renderAyudaTemas(){
+  const cont=document.getElementById('ayudaTemas');
+  if(!cont) return;
+  cont.innerHTML=CONCEPTOS_AGROVERDE.map(function(c,i){
+    return '<button type="button" class="ayuda-tema" onclick="verOpcionesAyuda('+i+')">'+iconoConcepto(c)+' '+esc(c.titulo)+'</button>';
+  }).join('');
+}
+function verOpcionesAyuda(i){
+  const c=CONCEPTOS_AGROVERDE[i];
+  const temas=document.getElementById('ayudaTemas');
+  const ops=document.getElementById('ayudaOpciones');
+  if(!c||!temas||!ops) return;
+  temas.classList.add('hidden');
+  ops.classList.remove('hidden');
+  ayudaOpcionesActuales=(OPCIONES_AYUDA[c.titulo]||c.funciones||[]).slice();
+  ayudaOpcionesActuales.push('📘 Explícame '+c.titulo+' completo');
+  const ultima=ayudaOpcionesActuales.length-1;
+  ops.innerHTML='<button type="button" class="ayuda-volver" onclick="volverTemas()">← Todos los temas</button>'+
+    '<p class="ayuda-que">'+esc(c.que)+'</p>'+
+    ayudaOpcionesActuales.map(function(o,j){
+      return '<button type="button" class="ayuda-opcion'+(j===ultima?' ayuda-completa':'')+'" onclick="elegirOpcionAyuda('+i+','+j+')">'+esc(o)+'</button>';
+    }).join('');
+}
+function volverTemas(){
+  const temas=document.getElementById('ayudaTemas');
+  const ops=document.getElementById('ayudaOpciones');
+  if(temas) temas.classList.remove('hidden');
+  if(ops){ ops.classList.add('hidden'); ops.innerHTML=''; }
+}
+function elegirOpcionAyuda(i,j){
+  const c=CONCEPTOS_AGROVERDE[i];
+  const op=ayudaOpcionesActuales[j];
+  volverTemas();
+  if(!c||!op) return;
+  mensajeAsistente(op,'user');
+  const encabezado='<b>'+esc(op)+'</b><br>';
+  mostrarRespuestaAsistente(encabezado+textoConcepto(c,accionModulo,false,false),true);
+}
+
 function toggleAsistente(){
   const panel=document.getElementById('asistentePanel');
   const abrir=panel.classList.contains('hidden');
   panel.classList.toggle('hidden',!abrir);
   if(abrir){
+    ensureAyudaCard();
     verificarIA();
     const chat=document.getElementById('asistenteChat');
-    if(!chat.innerHTML){
-      mensajeAsistente(`¡Hola${actual?' '+esc(actual.nombre.split(' ')[0]):''}! Soy el <b>asistente AgroVerde</b>. Puedo ayudarte a registrar lotes, escanear códigos, trabajar sin señal, validar, consultar stock o explicar un módulo. Escribe tu pregunta o toca una opción rápida.`,'bot');
+    if(!chat.querySelector('.chat-bubble')){
+      mensajeAsistente(`¡Hola${actual?' '+esc(actual.nombre.split(' ')[0]):''}! Soy el <b>asistente AgroVerde</b>. Elige un tema en el recuadro de ayuda o escribe tu pregunta.`,'bot');
     }
     setTimeout(function(){ document.getElementById('asistenteInput').focus(); },120);
   }
@@ -1566,7 +1804,7 @@ function preguntaRapida(t){
 }
 function responderAsistente(t,escribir){
   const q=t.toLowerCase();
-  const accion=function(id,label){ return '<button class="chat-action" onclick="ir(\''+id+'\');toggleAsistente()">'+label+' →</button>'; };
+  const accion=accionModulo;
   const codigo=(t.match(/LOTE-[\w-]+/i)||[])[0];
   let r='';
   let esFallback=false;

@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>AgroVerde S.A.C. — Sistema de Trazabilidad de Lotes</title>
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
 
@@ -99,6 +99,7 @@
     </div>
     <div id="asistenteChat" class="asistente-chat"></div>
     <div class="asistente-quick">
+      <button onclick="abrirAyudaRapida()">🛟 Ayuda</button>
       <button onclick="preguntaRapida('¿Cómo registro un lote?')">Registrar lote</button>
       <button onclick="preguntaRapida('¿Qué hago si no hay señal?')">Sin señal</button>
       <button onclick="preguntaRapida('¿Quién valida los lotes?')">Validación</button>
@@ -120,11 +121,11 @@
   </div>
 </div>
 
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js?v=18').catch(function () {});
+    navigator.serviceWorker.register('sw.js?v=19').catch(function () {});
   });
 }
 </script>
