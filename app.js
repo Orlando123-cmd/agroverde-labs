@@ -1,6 +1,15 @@
 'use strict';
 /* AgroVerde S.A.C. — Trazabilidad de lotes. Persistencia: localStorage. */
 const DB_KEY = 'agroverde_db_v1';
+// Cierre automático de sesión por inactividad (RNF01 / seguridad de datos de RRHH)
+const INACTIVIDAD_MS = 10 * 60 * 1000;   // 10 minutos
+const AVISO_MS = 8 * 60 * 1000;          // aviso 2 minutos antes
+let ultimaActividad = 0;
+let ultimoGuardadoActividad = 0;
+let ultimoResetTimer = 0;
+let timerAviso = null;
+let timerCierre = null;
+let avisoMostrado = false;
 
 const USUARIOS = [
   {usuario:'operario1', pass:'op123', nombre:'Pablo Blas', rol:'Operario de producción', linea:'L1'},
@@ -84,9 +93,12 @@ function iniciarSesion(e){
   }
   if(!user) return toast('Usuario o contraseña incorrectos.');
   actual={usuario:user.usuario,nombre:user.nombre,rol:user.rol,linea:user.linea||'—'};
-  db.session=actual; aud('Inicio de sesión', actual.rol+(db.modoOffline?' (offline RN06)':'')); guardarDB(); renderApp();
+  db.session=actual;
+  ultimaActividad=Date.now(); db.session.ultimaActividad=ultimaActividad;
+  aud('Inicio de sesión', actual.rol+(db.modoOffline?' (offline RN06)':'')); guardarDB();
+  registrarActividad(true); renderApp();
 }
-function cerrarSesion(){ aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null; document.getElementById('app').classList.add('hidden'); document.getElementById('login').classList.remove('hidden'); document.getElementById('asistente').classList.add('hidden'); }
+function cerrarSesion(){ limpiarTemporizadores(); aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null; document.getElementById('app').classList.add('hidden'); document.getElementById('login').classList.remove('hidden'); document.getElementById('asistente').classList.add('hidden'); }
 function cambiarModo(){ db.modoOffline=!db.modoOffline; aud('Cambio de conectividad', db.modoOffline?'Modo offline activo':'Modo en línea activo'); guardarDB(); actualizarCabecera(); ir(moduloActual); toast(db.modoOffline?'Modo offline: los registros quedarán pendientes.':'Modo en línea restablecido.'); }
 function actualizarCabecera(){
   document.getElementById('btnModo').textContent=db.modoOffline?'📴 Sin conexión':'🌐 En línea';
@@ -97,6 +109,11 @@ function renderApp(){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('asistente').classList.remove('hidden');
+  const guardada = db.session ? db.session.ultimaActividad : 0;
+  if (guardada && Date.now() - guardada >= INACTIVIDAD_MS) { cerrarPorInactividad(true); return; }
+  ultimaActividad = guardada || Date.now();
+  if (db.session) { db.session.ultimaActividad = ultimaActividad; guardarDB(); }
+  reiniciarTemporizador();
   actualizarCabecera();
   document.getElementById('menu').innerHTML=MODULOS_INFO.filter(m=>tiene(m.id))
     .map(m=>`<button id="nav-${m.id}" onclick="ir('${m.id}')">${m.icono} ${m.label}</button>`).join('');
@@ -417,6 +434,51 @@ function responderAsistente(t){
   }
   mensajeAsistente(r,'bot');
 }
+
+/* ---------- Cierre automático por inactividad ---------- */
+function limpiarTemporizadores(){
+  clearTimeout(timerAviso); clearTimeout(timerCierre);
+  timerAviso=null; timerCierre=null; avisoMostrado=false;
+}
+function reiniciarTemporizador(){
+  if(!actual) return;
+  limpiarTemporizadores();
+  timerAviso=setTimeout(mostrarAvisoInactividad, AVISO_MS);
+  timerCierre=setTimeout(function(){ cerrarPorInactividad(false); }, INACTIVIDAD_MS);
+}
+function registrarActividad(forzar){
+  if(!actual) return;
+  const ahora=Date.now();
+  ultimaActividad=ahora;
+  if(db.session) db.session.ultimaActividad=ahora;
+  if(forzar || ahora-ultimoGuardadoActividad>15000){ ultimoGuardadoActividad=ahora; guardarDB(); }
+  if(!avisoMostrado && (forzar || ahora-ultimoResetTimer>1000)){
+    ultimoResetTimer=ahora; reiniciarTemporizador();
+  }
+}
+function mostrarAvisoInactividad(){
+  if(!actual || avisoMostrado) return;
+  avisoMostrado=true;
+  abrirModal('<h2>Sesión por cerrar</h2>'+
+    '<p>Por seguridad, tu sesión se cerrará en <b>2 minutos</b> si no registras actividad.</p>'+
+    '<p style="font-size:12px;color:#667">Cierre automático: 10 minutos de inactividad.</p>'+
+    '<button class="btn" onclick="continuarSesion()">Seguir trabajando</button> '+
+    '<button class="btn ghost" onclick="cerrarSesion()">Cerrar ahora</button>');
+}
+function continuarSesion(){ cerrarModal(); registrarActividad(true); toast('Sesión extendida por 10 minutos más.'); }
+function cerrarPorInactividad(silencioso){
+  limpiarTemporizadores();
+  if(actual) aud('Cierre por inactividad', 'Sesión finalizada automáticamente tras 10 min sin actividad');
+  db.session=null; guardarDB(); actual=null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('asistente').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('modal').classList.add('hidden');
+  if(!silencioso) toast('Sesión cerrada por inactividad. Vuelve a ingresar.');
+}
+['click','keydown','touchstart','scroll','mousemove'].forEach(function(ev){
+  window.addEventListener(ev, function(){ registrarActividad(false); }, {passive:true});
+});
 
 /* ---------- Arranque ---------- */
 db=cargarDB();

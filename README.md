@@ -40,6 +40,8 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 | gerencia1 | ger123 | Gerencia |
 | admin1 | admin123 | Administrador (todos los módulos) |
 
+> **Cierre automático:** la sesión se cierra sola tras **10 minutos sin actividad** (RNF01). Aparece un aviso a los 8 minutos con botones «Seguir trabajando» y «Cerrar ahora». Cualquier clic, tecla o toque reinicia el contador; si se recarga la página, se respeta el tiempo restante guardado en `localStorage`.
+
 ## Módulos
 
 | Módulo | Requisitos | Qué hace |
