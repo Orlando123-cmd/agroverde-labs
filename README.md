@@ -73,6 +73,7 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 - Cada pregunta envía solo el puesto, los módulos permitidos y un resumen de lotes y stock del dispositivo. **Nunca se envían contraseñas, claves ni nombres/DNI de trabajadores**.
 - La respuesta se escribe progresivamente con `promptStreaming()`. Si el navegador solo soporta `prompt()`, aparece completa.
 - Si la IA no existe, falla o es una API que **solo repite el texto de entrada** (caso de algunos Chromium/Electron), el asistente detecta el eco y vuelve a las **reglas locales**, mostrando la respuesta con escritura progresiva y sin mensajes técnicos en el chat.
+- **Glosario integrado:** si la pregunta menciona un concepto (cámara, código de barras, lote, cierre, validación, offline, consulta, stock, conciliación, RRHH, documentos, trazabilidad, agua/mermas, auditoría, respaldos, usuarios, móvil, PWA, alertas, inactividad, etc.), la respuesta añade **qué es**, sus **funciones** y **dónde se encuentra** en la app, con un botón para abrir el módulo cuando el puesto lo permite. El mismo glosario se entrega al modelo local en el contexto.
 - En Chrome/Edge recientes la función puede requerir habilitar *Prompt API for Gemini Nano* y *Optimization Guide On Device Model* en `chrome://flags`, además de descargar el modelo una vez. Si no está disponible, la app sigue funcionando con el asistente de reglas.
 
 ## Estructura del ZIP
