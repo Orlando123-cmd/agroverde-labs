@@ -153,18 +153,60 @@ function actualizarCabecera(){
   document.getElementById('btnModo').textContent=db.modoOffline?'📴 Sin conexión':'🌐 En línea';
   document.getElementById('badgeUsuario').textContent=actual?actual.nombre+' · '+actual.rol:'';
   document.getElementById('bannerOffline').classList.toggle('hidden',!db.modoOffline);
+  const av=document.getElementById('avatarUsuario');
+  if(av) av.textContent=actual?String(actual.nombre||'?').split(/\s+/).map(function(p){return p[0]||'';}).join('').slice(0,2).toUpperCase():'🌱';
 }
+const ETIQUETAS_MOVIL={inicio:'Inicio',cierre:'Cierre',escanear:'Escanear',consulta:'Buscar',validar:'Validar',
+  trazabilidad:'Trazar',ingreso:'Stock',personal:'RRHH',auditoria:'Auditoría',offline:'Offline',documentos:'Docs',conciliacion:'Conciliar',consumo:'Agua'};
 function refrescarMenu(){
-  document.getElementById('menu').innerHTML=MODULOS_INFO.filter(m=>tiene(m.id))
+  const permitidos=MODULOS_INFO.filter(m=>tiene(m.id));
+  document.getElementById('menu').innerHTML=permitidos
     .map(m=>`<button id="nav-${m.id}" onclick="ir('${m.id}')">${m.icono} ${m.label}</button>`).join('');
+  const barra=document.getElementById('menuMovil');
+  if(barra){
+    const orden=['inicio','escanear','cierre','consulta','validar','trazabilidad','ingreso','personal','auditoria'];
+    const fijos=orden.filter(function(id){ return permitidos.some(m=>m.id===id); }).slice(0,4)
+      .map(function(id){ return permitidos.find(m=>m.id===id); });
+    barra.innerHTML=fijos.map(function(m){
+      return `<button data-modulo="${m.id}" onclick="ir('${m.id}')"><span class="mi">${m.icono}</span><span class="mt">${esc(ETIQUETAS_MOVIL[m.id]||m.label)}</span></button>`;
+    }).join('')+'<button class="mas" onclick="abrirModulos()"><span class="mi">☰</span><span class="mt">Más</span></button>';
+  }
+}
+function abrirModulos(){
+  const mods=MODULOS_INFO.filter(m=>tiene(m.id));
+  abrirModal('<h2>Todos los módulos</h2><p class="sub">Elija un módulo para continuar</p><div class="modulos-grid">'+
+    mods.map(m=>`<button class="modulo-btn" onclick="irModuloMovil('${m.id}')"><span>${m.icono}</span><b>${esc(m.label)}</b></button>`).join('')+'</div>');
+}
+function irModuloMovil(id){ cerrarModal(); ir(id); }
+function mejorarTablasMovil(){
+  if(!window.matchMedia || !matchMedia('(max-width:600px)').matches) return;
+  document.querySelectorAll('#contenido table').forEach(function(t){
+    if(t.classList.contains('tabla-movil')) return;
+    let cab=Array.from(t.querySelectorAll('thead th')).map(function(h){ return h.textContent.trim(); });
+    let filaCab=t.querySelector('thead tr');
+    if(!cab.length){
+      filaCab=Array.from(t.querySelectorAll('tr')).find(function(f){ return f.querySelector('th'); });
+      if(filaCab) cab=Array.from(filaCab.querySelectorAll('th')).map(function(h){ return h.textContent.trim(); });
+    }
+    if(!cab.length) return;
+    t.classList.add('tabla-movil');
+    if(filaCab) filaCab.classList.add('fila-cabecera');
+    t.querySelectorAll('tbody tr').forEach(function(tr){
+      if(tr.classList.contains('fila-cabecera')) return;
+      Array.from(tr.children).forEach(function(td,i){
+        if(cab[i]) td.setAttribute('data-label',cab[i]);
+        if(td.querySelector('button')) td.classList.add('celda-acciones');
+      });
+    });
+  });
 }
 function renderUsuariosLogin(){
   const c=document.getElementById('listaUsuariosLogin');
   if(!c) return;
   const us=listaUsuarios().filter(u=>u.activo!==false);
   c.innerHTML=us.length
-    ? us.map(u=>`<code>${esc(u.usuario)}</code> · ${esc(u.rol==='Administrador'?'sistema':u.rol)}<br>`).join('')
-    : '<span>No hay usuarios activos. Pida soporte al administrador.</span>';
+    ? us.map(u=>`<span class="usuario-chip"><code>${esc(u.usuario)}</code><small>${esc(u.rol==='Administrador'?'sistema':u.rol)}</small></span>`).join('')
+    : '<span class="hint">No hay usuarios activos. Pida soporte al administrador.</span>';
 }
 function renderApp(){
   document.getElementById('login').classList.add('hidden');
@@ -183,7 +225,7 @@ function ir(mod){
   if(!tiene(mod)) mod='inicio';
   if(moduloActual==='escanear' && mod!=='escanear') detenerEscaneo(true);
   moduloActual=mod;
-  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('activo', b.id==='nav-'+mod));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('activo', b.id==='nav-'+mod || b.dataset.modulo===mod));
   const views={inicio:vInicio,cierre:vCierre,escanear:vEscanear,validar:vValidar,offline:vOffline,consulta:vConsulta,ingreso:vIngreso,
     conciliacion:vConciliacion,personal:vPersonal,documentos:vDocumentos,trazabilidad:vTrazabilidad,consumo:vConsumo,auditoria:vAuditoria,usuarios:vUsuarios};
   document.getElementById('contenido').innerHTML=(views[mod]||vInicio)();
@@ -226,7 +268,7 @@ function vInicio(){
   const stock=Object.values(db.stock).reduce((a,b)=>a+b,0);
   const alertas=calcularAlertas();
   return `<h2>Panel de control</h2>
-  <div class="grid">
+  <div class="grid metrics">
     <div class="metric"><b>${db.lotes.length}</b><span>Lotes registrados</span></div>
     <div class="metric"><b>${validados}</b><span>Lotes validados</span></div>
     <div class="metric"><b>${pendientes}</b><span>Pendientes de sincronización</span></div>
@@ -1061,3 +1103,10 @@ if(db.session){
   if(actual) renderApp();
   else { db.session=null; guardarDB(); }
 }
+/* Las tablas se convierten en tarjetas en celular. Se vuelve a aplicar cuando
+   una vista cambia su contenido (búsquedas, reportes, etc.). */
+if(window.MutationObserver){
+  const observadorTablas=new MutationObserver(function(){ requestAnimationFrame(mejorarTablasMovil); });
+  observadorTablas.observe(document.getElementById('contenido'),{childList:true,subtree:true});
+}
+mejorarTablasMovil();

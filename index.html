@@ -71,7 +71,8 @@
     <div class="topbar-actions">
       <button id="btnModo" class="btn" onclick="cambiarModo()">🌐 En línea</button>
       <span id="badgeUsuario" class="badge"></span>
-      <button class="btn ghost" onclick="cerrarSesion()">Salir</button>
+      <span id="avatarUsuario" class="avatar" aria-hidden="true">🌱</span>
+      <button class="btn ghost btn-salir" onclick="cerrarSesion()" aria-label="Cerrar sesión">Salir</button>
     </div>
   </header>
   <div class="layout">
@@ -84,6 +85,7 @@
       <div id="contenido"></div>
     </main>
   </div>
+  <nav id="menuMovil" class="menu-movil" aria-label="Navegación principal"></nav>
 </div>
 
 <!-- ============ ASISTENTE VIRTUAL ============ -->

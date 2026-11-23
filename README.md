@@ -56,6 +56,7 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 | Trazabilidad | RF09, CU08 | Reporte por lote con todos sus eventos, imprimible |
 | Agua y mermas | RF10, CU09 | Registra consumo de agua y mermas por lote |
 | Auditoría | CL06 | Registra cada acción con usuario, fecha y detalle |
+| Diseño móvil | RNF03 / RNF04 | Barra inferior de navegación con los módulos más usados y botón «Más» para los 14 módulos, encabezado compacto con avatar de usuario, tablas que se convierten en tarjetas, campos táctiles grandes y respeto al área segura del celular |
 | Asistente virtual | Apoyo a RNF04 | Chat flotante que guía al personal por puesto, responde dudas, busca lotes por código y abre módulos. Usa reglas locales: no necesita internet ni API externa |
 | Escáner de lote | Apoyo a RF01 / RF03 | Al activar la cámara ocupa **pantalla completa** (botón ✕ Salir o tecla Esc). Lee QR o Code128 con `BarcodeDetector`; si no hay soporte, permite captura manual y lleva el código a Consulta, Trazabilidad o Registro de cierre |
 | Código de barras de prueba | Apoyo a RF01 / RF03 | Genera un **Code128-B** real de cualquier lote. Se puede ver, descargar en SVG, imprimir y verificar. El botón «Verificar lectura» usa `BarcodeDetector` si existe y, si no, un decodificador interno que lee la imagen y valida el checksum. También se incluye `codigo_barras_prueba.svg` listo para escanear desde otra pantalla |

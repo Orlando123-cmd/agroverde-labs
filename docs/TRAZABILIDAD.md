@@ -16,6 +16,7 @@
 | RNF02 | Protección de datos (Ley 29733) | CU06 | Datos y consentimiento | Consentimiento vigente obligatorio para operar el legajo |
 | RNF03 | Operación offline | CU02 | Modo offline | Cache de credenciales (RN06) y captura local |
 | RNF04 | Interfaz simple | — | Toda la app | Botones grandes, etiquetas claras, mensajes de confirmación |
+| RNF03 / RNF04 | Experiencia móvil (nuevo) | — | Toda la app en ≤ 600 px | Barra inferior de navegación con módulos frecuentes y botón «Más» (panel de los 14 módulos), encabezado compacto con avatar, tablas convertidas en tarjetas con etiquetas, campos de 48 px y área segura para el notch |
 | RNF05 | Consultas ≤ 3 s (p95) | CU03 | Consulta y búsqueda | Medición en pantalla con semáforo CUMPLE / NO CUMPLE |
 | RF11 | Consentimiento informado (nuevo) | CU06 / HU13 | Datos y consentimiento | Alta con vigencia; sin vigencia = **BLOQUEADO** |
 | Apoyo a RF01/RF03 | Lectura de código de lote | CU01 / CU03 | Escáner de lote | Cámara a pantalla completa (✕ Salir / Esc) con `BarcodeDetector` + captura manual; lleva el código a Consulta, Trazabilidad o cierre |
