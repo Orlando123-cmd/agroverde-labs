@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <title>AgroVerde S.A.C. — Sistema de Trazabilidad de Lotes</title>
-<link rel="stylesheet" href="styles.css?v=21">
+<link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
 
@@ -122,6 +122,10 @@
       <button type="button" class="ayuda-modal-btn" onclick="cerrarAyudaModal()" aria-label="Cerrar ayuda">✕</button>
     </div>
     <div id="ayudaModalBody" class="ayuda-modal-body"></div>
+    <div class="ayuda-modal-foot">
+      <button type="button" onclick="escribirDesdeAyuda()">✏️ Escribir mi pregunta</button>
+      <label><input type="checkbox" id="ayudaNoAuto" onchange="alternarAyudaAuto(this)"> No abrir esto al iniciar</label>
+    </div>
   </div>
 </div>
 
@@ -133,11 +137,11 @@
   </div>
 </div>
 
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js?v=21').catch(function () {});
+    navigator.serviceWorker.register('sw.js?v=22').catch(function () {});
   });
 }
 </script>

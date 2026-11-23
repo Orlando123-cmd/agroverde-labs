@@ -1720,6 +1720,8 @@ function abrirAyudaModal(i){
   if(!modal) return;
   modal.classList.remove('hidden');
   document.body.classList.add('ayuda-abierta');
+  const chk=document.getElementById('ayudaNoAuto');
+  if(chk) chk.checked=!ayudaAutoActiva();
   if(typeof i==='number') mostrarTemaModal(i); else mostrarTemasModal();
 }
 function abrirAyudaRapida(){ abrirAyudaModal(); }
@@ -1727,6 +1729,19 @@ function cerrarAyudaModal(){
   const modal=document.getElementById('ayudaModal');
   if(modal) modal.classList.add('hidden');
   document.body.classList.remove('ayuda-abierta');
+}
+function ayudaAutoActiva(){
+  try{ return localStorage.getItem('agroverde-ayuda-auto')!=='0'; }catch(e){ return true; }
+}
+function alternarAyudaAuto(el){
+  try{
+    if(el.checked) localStorage.setItem('agroverde-ayuda-auto','0');
+    else localStorage.removeItem('agroverde-ayuda-auto');
+  }catch(e){}
+}
+function escribirDesdeAyuda(){
+  cerrarAyudaModal();
+  setTimeout(function(){ const i=document.getElementById('asistenteInput'); if(i) i.focus(); },80);
 }
 function mostrarTemasModal(){
   const titulo=document.getElementById('ayudaModalTitulo');
@@ -1798,6 +1813,7 @@ function toggleAsistente(){
       mensajeAsistente(`¡Hola${actual?' '+esc(actual.nombre.split(' ')[0]):''}! Soy el <b>asistente AgroVerde</b>. Elige un tema en el recuadro de ayuda o escribe tu pregunta.`,'bot');
     }
     setTimeout(function(){ document.getElementById('asistenteInput').focus(); },120);
+    if(ayudaAutoActiva()) setTimeout(function(){ abrirAyudaModal(); },160);
   }
 }
 function mensajeAsistente(texto,quien,streaming){
