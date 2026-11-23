@@ -67,12 +67,12 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 
 ### Asistente con IA local (tiempo real)
 
-- El encabezado del chat muestra el estado: **comprobando IA**, **IA local disponible**, **descargando modelo**, **IA local activa** o **asistente por reglas**.
+- El encabezado del chat muestra un estado breve: **comprobando IA**, **IA local disponible**, **descargando modelo**, **IA local activa** o **asistente local · siempre disponible**. El trabajador no ve avisos técnicos dentro de la conversación.
 - El botón **IA** activa el modelo local; si hace falta, descarga el modelo del navegador mostrando el avance. Cuando ya está listo, se activa automáticamente al escribir la primera pregunta.
 - **La app no llama a servicios externos ni usa claves**: se usa `window.LanguageModel`, `window.ai.languageModel` o `window.ai.assistant`, según lo que ofrezca el navegador. Si el modelo local aún no está instalado, Chrome lo descarga una sola vez.
 - Cada pregunta envía solo el puesto, los módulos permitidos y un resumen de lotes y stock del dispositivo. **Nunca se envían contraseñas, claves ni nombres/DNI de trabajadores**.
 - La respuesta se escribe progresivamente con `promptStreaming()`. Si el navegador solo soporta `prompt()`, aparece completa.
-- Si la IA no existe, falla o es una API que **solo repite el texto de entrada** (caso de algunos Chromium/Electron), el asistente detecta el eco y vuelve a las **reglas locales**, mostrando la respuesta con escritura progresiva.
+- Si la IA no existe, falla o es una API que **solo repite el texto de entrada** (caso de algunos Chromium/Electron), el asistente detecta el eco y vuelve a las **reglas locales**, mostrando la respuesta con escritura progresiva y sin mensajes técnicos en el chat.
 - En Chrome/Edge recientes la función puede requerir habilitar *Prompt API for Gemini Nano* y *Optimization Guide On Device Model* en `chrome://flags`, además de descargar el modelo una vez. Si no está disponible, la app sigue funcionando con el asistente de reglas.
 
 ## Estructura del ZIP

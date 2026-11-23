@@ -1185,22 +1185,22 @@ function actualizarEstadoIA(estado,texto){
 }
 async function verificarIA(){
   if(iaSesion){ actualizarEstadoIA('activa','IA local activa · respuestas en tiempo real'); return true; }
-  if(iaSinModeloReal){ actualizarEstadoIA('no','Asistente por reglas · este navegador solo repite texto'); return false; }
+  if(iaSinModeloReal){ actualizarEstadoIA('no','Asistente local · siempre disponible'); return false; }
   if(iaVerificando) return false;
   iaVerificando=true;
   actualizarEstadoIA('comprobando','Ayuda · comprobando IA local…');
   try{
     iaApi=apiIA();
-    if(!iaApi){ actualizarEstadoIA('no','Asistente por reglas · sin IA local en este navegador'); return false; }
+    if(!iaApi){ actualizarEstadoIA('no','Asistente local · siempre disponible'); return false; }
     const d=await disponibilidadIA(iaApi);
-    if(d==='no'){ actualizarEstadoIA('no','Asistente por reglas · IA local no disponible'); return false; }
+    if(d==='no'){ actualizarEstadoIA('no','Asistente local · siempre disponible'); return false; }
     if(d==='descargando'){ actualizarEstadoIA('descargando','Descargando modelo local…'); return false; }
     if(d==='descargable'){ actualizarEstadoIA('descargable','IA local lista para descargar · toca IA'); return false; }
     actualizarEstadoIA('disponible','IA local disponible · escribe y responde al instante');
     return true;
   }catch(err){
     iaUltimoError=(err&&err.message)?err.message:String(err);
-    actualizarEstadoIA('no','Asistente por reglas · no se pudo comprobar la IA');
+    actualizarEstadoIA('no','Asistente local · siempre disponible');
     return false;
   }finally{ iaVerificando=false; }
 }
@@ -1289,7 +1289,7 @@ async function leerStreamIA(stream,alTrozo){
 function destruirIA(){
   try{ if(iaSesion && typeof iaSesion.destroy==='function') iaSesion.destroy(); }catch(e){}
   iaSesion=null; iaActivando=null;
-  actualizarEstadoIA(iaApi?'disponible':'no',iaApi?'IA local disponible · toca IA para activar':'Asistente por reglas · sin IA local');
+  actualizarEstadoIA(iaApi?'disponible':'no',iaApi?'IA local disponible · toca IA para activar':'Asistente local · siempre disponible');
 }
 async function activarIALocal(silencioso){
   if(iaSesion){
@@ -1298,14 +1298,13 @@ async function activarIALocal(silencioso){
     return true;
   }
   if(iaSinModeloReal){
-    actualizarEstadoIA('no','Asistente por reglas · IA local no funcional');
-    if(!silencioso) toast('Este navegador solo repite texto; se usan respuestas por reglas.');
+    actualizarEstadoIA('no','Asistente local · siempre disponible');
     return false;
   }
   if(iaActivando) return iaActivando;
   const api=iaApi||apiIA();
   if(!api){
-    if(!silencioso){ verificarIA(); toast('Este navegador no ofrece IA local; se usan respuestas por reglas.'); }
+    verificarIA();
     return false;
   }
   iaApi=api;
@@ -1329,11 +1328,7 @@ async function activarIALocal(silencioso){
         try{ if(candidata && typeof candidata.destroy==='function') candidata.destroy(); }catch(e){}
         iaSinModeloReal=true; iaSesion=null;
         iaUltimoError='Este navegador expone la API pero solo repite el texto de entrada.';
-        actualizarEstadoIA('no','Asistente por reglas · IA local no funcional');
-        if(!silencioso){
-          mensajeAsistente('Este navegador tiene una API de IA que solo repite el texto, así que no da respuestas reales. Volví al <b>asistente local de la app</b>, que sí responde y escribe progresivamente.','bot');
-          toast('IA local del navegador no funcional. Se usan respuestas por reglas.');
-        }
+        actualizarEstadoIA('no','Asistente local · siempre disponible');
         return false;
       }
       iaSesion=candidata;
@@ -1343,11 +1338,7 @@ async function activarIALocal(silencioso){
     }catch(err){
       iaUltimoError=(err&&err.message)?err.message:String(err);
       iaSesion=null;
-      actualizarEstadoIA('no','IA local no disponible · respuestas por reglas');
-      if(!silencioso){
-        mensajeAsistente('No pude activar la IA local en este navegador. Sigo respondiendo con las reglas de la app.','bot');
-        toast('IA local no disponible. Se usan respuestas por reglas.');
-      }
+      actualizarEstadoIA('no','Asistente local · siempre disponible');
       return false;
     }finally{ iaActivando=null; }
   })();
@@ -1384,9 +1375,7 @@ async function responderConIA(pregunta){
     if(burbuja.parentNode) burbuja.parentNode.removeChild(burbuja);
     try{ if(iaSesion && typeof iaSesion.destroy==='function') iaSesion.destroy(); }catch(e){}
     iaSesion=null;
-    actualizarEstadoIA('no',iaSinModeloReal
-      ?'Asistente por reglas · IA local no funcional'
-      :'IA local interrumpida · respuestas por reglas');
+    actualizarEstadoIA('no','Asistente local · siempre disponible');
     responderAsistente(pregunta,true);
     return false;
   }
