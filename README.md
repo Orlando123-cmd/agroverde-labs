@@ -57,7 +57,7 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 | Agua y mermas | RF10, CU09 | Registra consumo de agua y mermas por lote |
 | Auditoría | CL06 | Registra cada acción con usuario, fecha y detalle |
 | Diseño móvil | RNF03 / RNF04 | Barra inferior de navegación con los módulos más usados y botón «Más» para los 14 módulos, encabezado compacto con avatar de usuario, tablas que se convierten en tarjetas, campos táctiles grandes y respeto al área segura del celular |
-| Asistente virtual | Apoyo a RNF04 | Chat flotante que guía al personal por puesto, responde dudas, busca lotes por código y abre módulos. Usa reglas locales: no necesita internet ni API externa |
+| Asistente virtual | Apoyo a RNF04 | Chat flotante que guía al personal por puesto, responde dudas, busca lotes por código y abre módulos. Usa **IA local del navegador** (Prompt API / Gemini Nano) cuando está disponible y escribe la respuesta **mientras se genera**. Sin API local, clave o internet, responde con reglas locales |
 | Escáner de lote | Apoyo a RF01 / RF03 | **En celular** activa la cámara a pantalla completa (botón ✕ Salir o tecla Esc). **En computadora** detecta las cámaras conectadas, permite elegir la webcam y escanea en la vista previa sin pantalla completa. Lee QR con `BarcodeDetector` cuando está disponible y siempre puede leer **Code128** con el decodificador interno. El código leído lleva a Consulta, Trazabilidad o Registro de cierre |
 | Código de barras de prueba | Apoyo a RF01 / RF03 | Genera un **Code128-B** real de cualquier lote. Se puede ver, descargar en SVG, imprimir y verificar. El mismo decodificador interno lee el SVG o los cuadros de la cámara y valida el checksum; si el navegador tiene `BarcodeDetector`, se usa además para QR y otros formatos. También se incluye `codigo_barras_prueba.svg` listo para escanear desde otra pantalla |
 | Alertas del inicio | Apoyo a RF02 / RF11 / RF05 | Avisos de lotes sin validar, pendientes de sincronización, legajos bloqueados, consentimientos por vencer y pedidos con stock insuficiente |
@@ -65,12 +65,21 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 | Reportes descargables | RF03 / RF09 | Consulta, trazabilidad y auditoría se descargan en CSV (con BOM para Excel) y se pueden guardar como PDF desde «Imprimir» |
 | Gestión de usuarios | RNF01 | Solo Administrador: alta, baja/activación, cambio de contraseña, edición de puesto y línea. Las claves nunca se muestran en pantalla |
 
+### Asistente con IA local (tiempo real)
+
+- El encabezado del chat muestra el estado: **comprobando IA**, **IA local disponible**, **descargando modelo**, **IA local activa** o **asistente por reglas**.
+- El botón **IA** activa el modelo local; si hace falta, descarga el modelo del navegador mostrando el avance. Cuando ya está listo, se activa automáticamente al escribir la primera pregunta.
+- **No hay clave, servidor ni llamada a internet**: se usa `window.LanguageModel`, `window.ai.languageModel` o `window.ai.assistant`, según lo que ofrezca el navegador.
+- Cada pregunta envía solo el puesto, los módulos permitidos y un resumen de lotes y stock del dispositivo. **Nunca se envían contraseñas, claves ni nombres/DNI de trabajadores**.
+- La respuesta se escribe progresivamente con `promptStreaming()`. Si el navegador solo soporta `prompt()`, aparece completa; si la IA no existe o falla, el asistente vuelve automáticamente a las **reglas locales**.
+- En Chrome/Edge recientes la función puede requerir habilitar *Prompt API for Gemini Nano* y *Optimization Guide On Device Model* en `chrome://flags`, además de descargar el modelo una vez. Si no está disponible, la app sigue funcionando con el asistente de reglas.
+
 ## Estructura del ZIP
 
 ```
 index.html            Interfaz, login y registro de la PWA
 styles.css            Estilos responsive (móvil primero — RNF03/RNF04)
-app.js                Lógica, persistencia, reglas de negocio, Code128 y auditoría
+app.js                Lógica, persistencia, reglas de negocio, Code128, auditoría e IA local del navegador
 codigo_barras_prueba.svg  Código Code128 de LOTE-2026-001 listo para imprimir/escanear
 manifest.webmanifest  Manifiesto PWA (nombre, íconos, pantalla completa)
 sw.js                 Service worker: caché offline de la app

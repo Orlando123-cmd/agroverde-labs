@@ -93,7 +93,8 @@
   <div id="asistentePanel" class="asistente-panel hidden">
     <div class="asistente-head">
       <div class="asistente-avatar">🤖</div>
-      <div><strong>Asistente AgroVerde</strong><small>Ayuda para el personal · en línea</small></div>
+      <div><strong>Asistente AgroVerde</strong><small id="estadoIA">Ayuda para el personal · comprobando IA…</small></div>
+      <button id="btnIA" class="asistente-ia" onclick="activarIALocal()" title="Activar IA local del navegador">IA</button>
       <button class="asistente-close" onclick="toggleAsistente()" aria-label="Cerrar">✕</button>
     </div>
     <div id="asistenteChat" class="asistente-chat"></div>
