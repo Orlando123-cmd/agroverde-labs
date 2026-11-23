@@ -11,27 +11,29 @@ let timerAviso = null;
 let timerCierre = null;
 let avisoMostrado = false;
 
-const USUARIOS = [
-  {usuario:'operario1', pass:'op123', nombre:'Pablo Blas', rol:'Operario de producción', linea:'L1'},
-  {usuario:'jefe1', pass:'jefe123', nombre:'David Ruiz', rol:'Jefe de producción', linea:'L1'},
-  {usuario:'almacen1', pass:'alm123', nombre:'Dayron Yangali', rol:'Encargado de almacén'},
-  {usuario:'rrhh1', pass:'rrhh123', nombre:'Orlando Ravenna', rol:'Especialista de RRHH'},
-  {usuario:'gerencia1', pass:'ger123', nombre:'Gerencia AgroVerde', rol:'Gerencia'},
-  {usuario:'admin1', pass:'admin123', nombre:'Administrador', rol:'Administrador'}
+// Usuarios semilla. La lista editable vive en db.usuarios (gestión desde la app).
+const USUARIOS_SEMILLA = [
+  {usuario:'operario1', pass:'op123', nombre:'Pablo Blas', rol:'Operario de producción', linea:'L1', activo:true},
+  {usuario:'jefe1', pass:'jefe123', nombre:'David Ruiz', rol:'Jefe de producción', linea:'L1', activo:true},
+  {usuario:'almacen1', pass:'alm123', nombre:'Dayron Yangali', rol:'Encargado de almacén', linea:'', activo:true},
+  {usuario:'rrhh1', pass:'rrhh123', nombre:'Orlando Ravenna', rol:'Especialista de RRHH', linea:'', activo:true},
+  {usuario:'gerencia1', pass:'ger123', nombre:'Gerencia AgroVerde', rol:'Gerencia', linea:'', activo:true},
+  {usuario:'admin1', pass:'admin123', nombre:'Administrador', rol:'Administrador', linea:'', activo:true}
 ];
 
 const MODULOS = {
-  'Operario de producción': ['inicio','cierre','offline','consulta','consumo'],
-  'Jefe de producción': ['inicio','cierre','validar','offline','consulta','consumo','trazabilidad'],
-  'Encargado de almacén': ['inicio','consulta','ingreso','conciliacion','offline','trazabilidad'],
+  'Operario de producción': ['inicio','cierre','escanear','offline','consulta','consumo'],
+  'Jefe de producción': ['inicio','cierre','escanear','validar','offline','consulta','consumo','trazabilidad'],
+  'Encargado de almacén': ['inicio','escanear','consulta','ingreso','conciliacion','offline','trazabilidad'],
   'Especialista de RRHH': ['inicio','personal','consulta','trazabilidad'],
   'Gerencia': ['inicio','consulta','trazabilidad','documentos','auditoria'],
-  'Administrador': ['inicio','cierre','validar','offline','consulta','ingreso','conciliacion','personal','documentos','trazabilidad','consumo','auditoria']
+  'Administrador': ['inicio','cierre','escanear','validar','offline','consulta','ingreso','conciliacion','personal','documentos','trazabilidad','consumo','auditoria','usuarios']
 };
 
 const MODULOS_INFO = [
   {id:'inicio', label:'Inicio', icono:'🏠'},
   {id:'cierre', label:'Registro de cierre', icono:'📝'},
+  {id:'escanear', label:'Escáner de lote', icono:'📷'},
   {id:'validar', label:'Validar lotes', icono:'✅'},
   {id:'offline', label:'Modo offline', icono:'📴'},
   {id:'consulta', label:'Consulta y búsqueda', icono:'🔎'},
@@ -41,16 +43,24 @@ const MODULOS_INFO = [
   {id:'documentos', label:'Documentos', icono:'📄'},
   {id:'trazabilidad', label:'Trazabilidad', icono:'🔗'},
   {id:'consumo', label:'Agua y mermas', icono:'💧'},
-  {id:'auditoria', label:'Auditoría', icono:'🧾'}
+  {id:'auditoria', label:'Auditoría y respaldos', icono:'🧾'},
+  {id:'usuarios', label:'Gestión de usuarios', icono:'⚙️'}
 ];
 
 let db = null;
 let actual = null;
 let moduloActual = 'inicio';
+let streamCamara = null;
+let detectorCodigos = null;
+let escaneoActivo = false;
+let ultimoEscaneo = 0;
+let ultimoReporte = null;
+let ultimaConsulta = [];
 
 /* ---------- Persistencia y semilla ---------- */
 function semilla(){
   return {
+    usuarios: USUARIOS_SEMILLA.map(u=>({...u})),
     lotes:[
       {codigo:'LOTE-2026-001', linea:'L1', fecha:'2026-11-20', cantidad:1200, turno:'Mañana', estado:'Validado', ubicacion:'Almacén A', sync:'Sincronizado'},
       {codigo:'LOTE-2026-002', linea:'L1', fecha:'2026-11-21', cantidad:850, turno:'Tarde', estado:'Pendiente', ubicacion:'Línea L1', sync:'Pendiente de sincronización · 21/11/2026 14:30'},
@@ -61,13 +71,26 @@ function semilla(){
     movimientos:[], conciliaciones:[], documentos:[], consumo:[],
     trabajadores:[
       {dni:'12345678', nombre:'Ana Quispe', cargo:'Operaria', vigente:true, fin:'2027-12-31', estado:'ACTIVO'},
+      {dni:'11223344', nombre:'María Rojas', cargo:'Operaria', vigente:true, fin:'2026-12-15', estado:'ACTIVO'},
       {dni:'87654321', nombre:'Luis Pérez', cargo:'Operario', vigente:false, fin:'2026-10-01', estado:'BLOQUEADO — sin consentimiento'}
     ],
     auditoria:[{fecha:ahora(), usuario:'Sistema', accion:'Inicialización', detalle:'Datos semilla de AgroVerde S.A.C.'}],
     cache:{}, session:null, modoOffline:false
   };
 }
-function cargarDB(){ try { const raw = localStorage.getItem(DB_KEY); return raw ? JSON.parse(raw) : semilla(); } catch(e){ return semilla(); } }
+function cargarDB(){
+  try {
+    const raw=localStorage.getItem(DB_KEY);
+    if(!raw) return semilla();
+    const d=JSON.parse(raw);
+    if(!d || typeof d!=='object' || !Array.isArray(d.lotes)) return semilla();
+    ['movimientos','conciliaciones','documentos','consumo','pedidos','trabajadores','auditoria'].forEach(function(k){ if(!Array.isArray(d[k])) d[k]=[]; });
+    if(!Array.isArray(d.usuarios)||!d.usuarios.length) d.usuarios=USUARIOS_SEMILLA.map(u=>({...u}));
+    if(!d.stock||typeof d.stock!=='object') d.stock={};
+    if(!d.cache||typeof d.cache!=='object') d.cache={};
+    return d;
+  } catch(e){ return semilla(); }
+}
 function guardarDB(){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 function ahora(){ const d=new Date(); return d.toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'}); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -78,17 +101,36 @@ function abrirModal(html){ document.getElementById('modalBody').innerHTML=html; 
 function cerrarModal(e){ if(e && e.target && e.target.id!=='modal') return; document.getElementById('modal').classList.add('hidden'); }
 function imprimir(){ window.print(); }
 function tiene(m){ return (MODULOS[actual.rol]||[]).includes(m); }
+function listaUsuarios(){ return (db && Array.isArray(db.usuarios) && db.usuarios.length) ? db.usuarios : USUARIOS_SEMILLA; }
+function diasParaVencer(fin){
+  const f=new Date(String(fin)+'T00:00:00');
+  if(isNaN(f.getTime())) return null;
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  return Math.round((f-hoy)/86400000);
+}
+function descargarBlob(blob,nombre){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); },1500);
+}
+function csvCell(v){ const s=String(v ?? ''); return /[;"\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function guardarCSV(filas,nombre){
+  const contenido='\uFEFF'+filas.map(f=>f.map(csvCell).join(';')).join('\r\n');
+  descargarBlob(new Blob([contenido],{type:'text/csv;charset=utf-8;'}),nombre);
+}
 
 /* ---------- Sesión ---------- */
 function iniciarSesion(e){
   e.preventDefault();
-  const u=val('usr'), p=val('pass');
+  const u=val('usr').toLowerCase(), p=val('pass');
+  const usuarios=listaUsuarios();
   let user=null;
   if(db.modoOffline){
-    if(db.cache[u]===p) user=USUARIOS.find(x=>x.usuario===u);
+    if(db.cache[u]===p) user=usuarios.find(x=>x.usuario===u && x.activo!==false);
     else return toast('RN06: sin red solo se aceptan credenciales ya usadas en este dispositivo.');
   } else {
-    user=USUARIOS.find(x=>x.usuario===u && x.pass===p);
+    user=usuarios.find(x=>x.usuario===u && x.pass===p && x.activo!==false);
     if(user) db.cache[u]=p;
   }
   if(!user) return toast('Usuario o contraseña incorrectos.');
@@ -98,12 +140,31 @@ function iniciarSesion(e){
   aud('Inicio de sesión', actual.rol+(db.modoOffline?' (offline RN06)':'')); guardarDB();
   registrarActividad(true); renderApp();
 }
-function cerrarSesion(){ limpiarTemporizadores(); aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null; document.getElementById('app').classList.add('hidden'); document.getElementById('login').classList.remove('hidden'); document.getElementById('asistente').classList.add('hidden'); }
+function cerrarSesion(){
+  limpiarTemporizadores(); detenerEscaneo(true);
+  aud('Cierre de sesión',''); db.session=null; guardarDB(); actual=null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('asistente').classList.add('hidden');
+  renderUsuariosLogin();
+}
 function cambiarModo(){ db.modoOffline=!db.modoOffline; aud('Cambio de conectividad', db.modoOffline?'Modo offline activo':'Modo en línea activo'); guardarDB(); actualizarCabecera(); ir(moduloActual); toast(db.modoOffline?'Modo offline: los registros quedarán pendientes.':'Modo en línea restablecido.'); }
 function actualizarCabecera(){
   document.getElementById('btnModo').textContent=db.modoOffline?'📴 Sin conexión':'🌐 En línea';
   document.getElementById('badgeUsuario').textContent=actual?actual.nombre+' · '+actual.rol:'';
   document.getElementById('bannerOffline').classList.toggle('hidden',!db.modoOffline);
+}
+function refrescarMenu(){
+  document.getElementById('menu').innerHTML=MODULOS_INFO.filter(m=>tiene(m.id))
+    .map(m=>`<button id="nav-${m.id}" onclick="ir('${m.id}')">${m.icono} ${m.label}</button>`).join('');
+}
+function renderUsuariosLogin(){
+  const c=document.getElementById('listaUsuariosLogin');
+  if(!c) return;
+  const us=listaUsuarios().filter(u=>u.activo!==false);
+  c.innerHTML=us.length
+    ? us.map(u=>`<code>${esc(u.usuario)}</code> · ${esc(u.rol==='Administrador'?'sistema':u.rol)}<br>`).join('')
+    : '<span>No hay usuarios activos. Pida soporte al administrador.</span>';
 }
 function renderApp(){
   document.getElementById('login').classList.add('hidden');
@@ -115,17 +176,47 @@ function renderApp(){
   if (db.session) { db.session.ultimaActividad = ultimaActividad; guardarDB(); }
   reiniciarTemporizador();
   actualizarCabecera();
-  document.getElementById('menu').innerHTML=MODULOS_INFO.filter(m=>tiene(m.id))
-    .map(m=>`<button id="nav-${m.id}" onclick="ir('${m.id}')">${m.icono} ${m.label}</button>`).join('');
+  refrescarMenu();
   ir('inicio');
 }
 function ir(mod){
   if(!tiene(mod)) mod='inicio';
+  if(moduloActual==='escanear' && mod!=='escanear') detenerEscaneo(true);
   moduloActual=mod;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('activo', b.id==='nav-'+mod));
-  const views={inicio:vInicio,cierre:vCierre,validar:vValidar,offline:vOffline,consulta:vConsulta,ingreso:vIngreso,
-    conciliacion:vConciliacion,personal:vPersonal,documentos:vDocumentos,trazabilidad:vTrazabilidad,consumo:vConsumo,auditoria:vAuditoria};
+  const views={inicio:vInicio,cierre:vCierre,escanear:vEscanear,validar:vValidar,offline:vOffline,consulta:vConsulta,ingreso:vIngreso,
+    conciliacion:vConciliacion,personal:vPersonal,documentos:vDocumentos,trazabilidad:vTrazabilidad,consumo:vConsumo,auditoria:vAuditoria,usuarios:vUsuarios};
   document.getElementById('contenido').innerHTML=(views[mod]||vInicio)();
+}
+
+/* ---------- Alertas del inicio ---------- */
+function calcularAlertas(){
+  const a=[];
+  const sinValidar=db.lotes.filter(l=>l.estado!=='Validado').length;
+  if(sinValidar) a.push({nivel:'pend',icono:'✅',texto:`<b>${sinValidar}</b> lote(s) sin validar`,
+    detalle:'Requieren revisión del Jefe de producción antes de generar documentos.',modulo:'validar',boton:'Validar'});
+
+  const pend=db.lotes.filter(l=>l.sync.startsWith('Pendiente')).length;
+  if(pend) a.push({nivel:'pend',icono:'↻',texto:`<b>${pend}</b> registro(s) pendiente(s) de sincronización`,
+    detalle:'Capturados sin señal. Sincroniza al volver a tener conexión.',modulo:'offline',boton:'Sincronizar'});
+
+  const bloqueados=db.trabajadores.filter(t=>String(t.estado).indexOf('BLOQUEADO')===0).length;
+  if(bloqueados) a.push({nivel:'bad',icono:'⛔',texto:`<b>${bloqueados}</b> legajo(s) bloqueado(s)`,
+    detalle:'Sin consentimiento vigente no deben operar (RN09).',modulo:'personal',boton:'Ver legajos'});
+
+  const porVencer=db.trabajadores.filter(function(t){
+    if(!t.vigente||!t.fin) return false;
+    const d=diasParaVencer(t.fin);
+    return d!==null && d>=0 && d<=60;
+  });
+  if(porVencer.length) a.push({nivel:'pend',icono:'📅',texto:`<b>${porVencer.length}</b> consentimiento(s) por vencer`,
+    detalle:porVencer.map(t=>t.nombre+' ('+t.fin+')').join(', '),modulo:'personal',boton:'Revisar'});
+
+  const insuf=db.pedidos.filter(p=>(db.stock[p.lote]||0)<p.cantidad).length;
+  if(insuf) a.push({nivel:'bad',icono:'📦',texto:`<b>${insuf}</b> pedido(s) con stock insuficiente`,
+    detalle:'Revisa la conciliación antes de programar el despacho.',modulo:'conciliacion',boton:'Conciliar'});
+
+  return a;
 }
 
 /* ---------- Vistas ---------- */
@@ -133,6 +224,7 @@ function vInicio(){
   const validados=db.lotes.filter(l=>l.estado==='Validado').length;
   const pendientes=db.lotes.filter(l=>l.sync.startsWith('Pendiente')).length;
   const stock=Object.values(db.stock).reduce((a,b)=>a+b,0);
+  const alertas=calcularAlertas();
   return `<h2>Panel de control</h2>
   <div class="grid">
     <div class="metric"><b>${db.lotes.length}</b><span>Lotes registrados</span></div>
@@ -140,10 +232,19 @@ function vInicio(){
     <div class="metric"><b>${pendientes}</b><span>Pendientes de sincronización</span></div>
     <div class="metric"><b>${stock.toLocaleString('es-PE')}</b><span>Unidades en stock</span></div>
   </div>
-  <div class="card"><h3>Actividad reciente</h3><table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
-  ${db.auditoria.slice(0,6).map(a=>`<tr><td>${esc(a.fecha)}</td><td>${esc(a.usuario)}</td><td>${esc(a.accion)}</td><td>${esc(a.detalle)}</td></tr>`).join('')}</table></div>
+  <div class="card alertas-card">
+    <div class="section-head"><h3>Alertas del turno</h3><span class="alerta-count">${alertas.length} aviso(s)</span></div>
+    ${alertas.length?`<div class="alertas-lista">${alertas.map(x=>`<div class="alerta-item ${x.nivel}">
+      <span class="alerta-icono">${x.icono}</span>
+      <div class="alerta-texto"><b>${x.texto}</b><small>${esc(x.detalle)}</small></div>
+      ${tiene(x.modulo)?`<button class="btn small" onclick="ir('${x.modulo}')">${x.boton}</button>`:''}
+    </div>`).join('')}</div>`:'<div class="msg ok">No hay alertas pendientes en este dispositivo.</div>'}
+  </div>
+  <div class="card"><h3>Actividad reciente</h3><div class="table-scroll"><table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
+  ${db.auditoria.slice(0,6).map(a=>`<tr><td>${esc(a.fecha)}</td><td>${esc(a.usuario)}</td><td>${esc(a.accion)}</td><td>${esc(a.detalle)}</td></tr>`).join('')}</table></div></div>
   <div class="card"><h3>Accesos rápidos</h3><p>
   ${tiene('cierre')?'<button class="btn small" onclick="ir(\'cierre\')">Registrar cierre</button> ':''}
+  ${tiene('escanear')?'<button class="btn small" onclick="ir(\'escanear\')">📷 Escanear lote</button> ':''}
   ${tiene('validar')?'<button class="btn small" onclick="ir(\'validar\')">Validar lotes</button> ':''}
   <button class="btn small" onclick="ir('consulta')">Buscar lote</button>
   ${tiene('trazabilidad')?'<button class="btn small" onclick="ir(\'trazabilidad\')">Ver trazabilidad</button>':''}
@@ -161,9 +262,10 @@ function vCierre(){
       <label>Cantidad <input id="cieCant" type="number" min="1" required></label>
     </div>
     <button class="btn primary" type="submit">Guardar cierre</button>
+    ${tiene('escanear')?'<button class="btn ghost" type="button" onclick="ir(\'escanear\')">📷 Escanear código</button>':''}
   </form></div>
-  <div class="card"><h3>Lotes registrados</h3><table><tr><th>Código</th><th>Línea</th><th>Fecha</th><th>Cantidad</th><th>Estado</th><th>Sincronización</th></tr>
-  ${lotes.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.linea)}</td><td>${esc(l.fecha)}</td><td>${l.cantidad}</td><td><span class="estado ${l.estado==='Validado'?'ok':l.estado==='Pendiente'?'pend':'bad'}">${esc(l.estado)}</span></td><td>${esc(l.sync)}</td></tr>`).join('')}</table></div>`;
+  <div class="card"><h3>Lotes registrados</h3><div class="table-scroll"><table><tr><th>Código</th><th>Línea</th><th>Fecha</th><th>Cantidad</th><th>Estado</th><th>Sincronización</th></tr>
+  ${lotes.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.linea)}</td><td>${esc(l.fecha)}</td><td>${l.cantidad}</td><td><span class="estado ${l.estado==='Validado'?'ok':l.estado==='Pendiente'?'pend':'bad'}">${esc(l.estado)}</span></td><td>${esc(l.sync)}</td></tr>`).join('')}</table></div></div>`;
 }
 function registrarCierre(e){
   e.preventDefault();
@@ -176,11 +278,122 @@ function registrarCierre(e){
     sync:pendiente?'Pendiente de sincronización · '+ahora():'Sincronizado'});
   aud('Registro de cierre', codigo+(pendiente?' (offline)':'')); guardarDB(); ir('cierre'); toast('Cierre registrado: '+codigo);
 }
+
+/* ---------- Escáner QR / código de barras ---------- */
+function vEscanear(){
+  return `<h2>Escáner de lote <small>(apoyo a RF01 · RF03)</small></h2>
+  <div class="card">
+    <p>Apunta la cámara al <b>QR o código de barras</b> del lote. Al leerlo podrás verlo en Consulta, generar su trazabilidad o usar el código en un nuevo cierre.</p>
+    <div class="scanner-box">
+      <video id="camaraVideo" playsinline muted autoplay></video>
+      <div class="scanner-marca"></div>
+      <div id="scannerMensaje" class="scanner-overlay">Cámara apagada</div>
+    </div>
+    <p class="acciones-tabla">
+      <button class="btn" onclick="iniciarEscaneo()">📷 Activar cámara</button>
+      <button class="btn ghost" onclick="detenerEscaneo()">⏹ Detener cámara</button>
+    </p>
+    <div id="resultadoEscaneo" class="msg"></div>
+    <p class="hint">La cámara necesita el link publicado (HTTPS) y permiso del navegador. Si tu equipo no la soporta, usa la captura manual de abajo.</p>
+  </div>
+  <div class="card"><h3>Captura manual del código</h3><form onsubmit="procesarCodigoManual(event)">
+    <label>Código del lote <input id="escanManual" placeholder="LOTE-2026-001" required autocomplete="off"></label>
+    <button class="btn" type="submit">Buscar código</button>
+  </form></div>`;
+}
+async function iniciarEscaneo(){
+  const video=document.getElementById('camaraVideo');
+  const msg=document.getElementById('scannerMensaje');
+  if(!video||!msg) return;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    msg.textContent='Este navegador no permite usar la cámara. Usa la captura manual.';
+    return toast('Cámara no disponible: usa la captura manual.');
+  }
+  if(!('BarcodeDetector' in window)){
+    msg.textContent='Lectura automática no soportada en este navegador. Usa la captura manual.';
+    return toast('Tu navegador no lee códigos automáticamente; usa captura manual.');
+  }
+  try{
+    detenerEscaneo(true);
+    streamCamara=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+    video.srcObject=streamCamara;
+    await video.play();
+    const formatos=await BarcodeDetector.getSupportedFormats();
+    const preferidos=['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','itf','codabar'];
+    const usar=preferidos.filter(f=>formatos.includes(f));
+    detectorCodigos=new BarcodeDetector({formats:usar.length?usar:formatos.slice(0,3)});
+    escaneoActivo=true;
+    msg.textContent='Cámara activa · apunta al código del lote';
+    bucleEscaneo();
+  }catch(err){
+    msg.textContent='No se pudo activar la cámara: '+((err&&err.message)?err.message:'permiso denegado');
+    toast('No se pudo activar la cámara. Usa la captura manual.');
+  }
+}
+function detenerEscaneo(silencioso){
+  escaneoActivo=false;
+  if(streamCamara){ streamCamara.getTracks().forEach(t=>t.stop()); streamCamara=null; }
+  const video=document.getElementById('camaraVideo');
+  if(video){ try{ video.pause(); video.srcObject=null; }catch(e){} }
+  const msg=document.getElementById('scannerMensaje');
+  if(msg) msg.textContent='Cámara apagada';
+  if(!silencioso){ const r=document.getElementById('resultadoEscaneo'); if(r){ r.className='msg'; r.textContent=''; } }
+}
+async function bucleEscaneo(){
+  if(!escaneoActivo||!detectorCodigos) return;
+  const video=document.getElementById('camaraVideo');
+  if(video && video.readyState>=2){
+    try{
+      const codigos=await detectorCodigos.detect(video);
+      if(codigos.length){
+        const raw=codigos[0].rawValue;
+        const ahoraMs=Date.now();
+        if(raw && ahoraMs-ultimoEscaneo>1500){ ultimoEscaneo=ahoraMs; procesarCodigo(raw,true); }
+      }
+    }catch(e){}
+  }
+  if(escaneoActivo) requestAnimationFrame(bucleEscaneo);
+}
+function extraerCodigo(raw){
+  let s=String(raw||'').trim();
+  try{ const j=JSON.parse(s); if(j && j.codigo) s=String(j.codigo); }catch(e){}
+  const m=s.match(/LOTE[-_][A-Za-z0-9-]+/i);
+  return (m?m[0]:s).toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,60);
+}
+function procesarCodigoManual(e){ e.preventDefault(); procesarCodigo(val('escanManual'),false); }
+function procesarCodigo(raw,desdeCamara){
+  const codigo=extraerCodigo(raw);
+  const r=document.getElementById('resultadoEscaneo');
+  if(!r) return;
+  if(!codigo) return toast('No se pudo leer un código.');
+  if(desdeCamara) detenerEscaneo(true);
+  const l=db.lotes.find(x=>x.codigo.toUpperCase()===codigo);
+  if(l){
+    r.className='msg ok';
+    r.innerHTML=`<b>Código leído:</b> ${esc(codigo)}<br>Línea ${esc(l.linea)} · ${l.cantidad} und · estado <b>${esc(l.estado)}</b> · ${esc(l.ubicacion)}.
+      <div class="acciones-tabla">
+        <button class="btn small" onclick="buscarCodigo('${esc(codigo)}')">Ver en Consulta</button>
+        ${tiene('trazabilidad')?`<button class="btn small ghost" onclick="verTrazabilidadCodigo('${esc(codigo)}')">Ver trazabilidad</button>`:''}
+        ${tiene('cierre')?`<button class="btn small ghost" onclick="usarCodigoEnCierre('${esc(codigo)}')">Registrar cierre</button>`:''}
+      </div>`;
+    aud('Escaneo de lote', codigo+(desdeCamara?' (cámara)':' (manual)'));
+  } else {
+    r.className='msg err';
+    r.innerHTML=`<b>Código ${esc(codigo)} no encontrado</b> en este dispositivo. Puedes usarlo para un nuevo cierre.
+      ${tiene('cierre')?`<div class="acciones-tabla"><button class="btn small" onclick="usarCodigoEnCierre('${esc(codigo)}')">Registrar cierre con este código</button></div>`:''}`;
+    aud('Escaneo sin coincidencia', codigo);
+  }
+  guardarDB();
+}
+function buscarCodigo(codigo){ detenerEscaneo(true); ir('consulta'); const i=document.getElementById('busq'); if(i) i.value=codigo; buscar({preventDefault:function(){}}); }
+function verTrazabilidadCodigo(codigo){ detenerEscaneo(true); ir('trazabilidad'); const s=document.getElementById('trzLote'); if(s) s.value=codigo; verTrazabilidad(); }
+function usarCodigoEnCierre(codigo){ detenerEscaneo(true); ir('cierre'); const i=document.getElementById('cieCod'); if(i){ i.value=codigo; i.focus(); } }
+
 function vValidar(){
   const pend=db.lotes.filter(l=>l.estado!=='Validado');
   return `<h2>Validación de lotes <small>(RN03 — solo Jefe/Administrador)</small></h2>
-  <div class="card"><table><tr><th>Código</th><th>Línea</th><th>Cantidad</th><th>Estado actual</th><th>Acción</th></tr>
-  ${pend.length?pend.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.linea)}</td><td>${l.cantidad}</td><td><span class="estado pend">${esc(l.estado)}</span></td><td><button class="btn small" onclick="validarLote('${esc(l.codigo)}')">Validar</button></td></tr>`).join(''):'<tr><td colspan="5">No hay lotes pendientes de validación.</td></tr>'}</table></div>`;
+  <div class="card"><div class="table-scroll"><table><tr><th>Código</th><th>Línea</th><th>Cantidad</th><th>Estado actual</th><th>Acción</th></tr>
+  ${pend.length?pend.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.linea)}</td><td>${l.cantidad}</td><td><span class="estado pend">${esc(l.estado)}</span></td><td><button class="btn small" onclick="validarLote('${esc(l.codigo)}')">Validar</button></td></tr>`).join(''):'<tr><td colspan="5">No hay lotes pendientes de validación.</td></tr>'}</table></div></div>`;
 }
 function validarLote(codigo){
   const l=db.lotes.find(x=>x.codigo===codigo); if(!l) return;
@@ -192,35 +405,49 @@ function vOffline(){
   <div class="card"><p><b>Estado actual:</b> ${db.modoOffline?'📴 Sin conexión — credenciales en caché activas (RN06)':'🌐 En línea'}</p>
   <button class="btn ${db.modoOffline?'warn':''}" onclick="cambiarModo()">${db.modoOffline?'Volver a conectarse':'Probar modo offline'}</button>
   <button class="btn" onclick="sincronizar()" ${pend.length?'':'disabled'}>Sincronizar ${pend.length} pendiente(s)</button></div>
-  <div class="card"><h3>Registros pendientes</h3><table><tr><th>Código</th><th>Fecha de captura</th><th>Estado</th></tr>
-  ${pend.length?pend.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.sync.replace('Pendiente de sincronización · ',''))}</td><td><span class="estado pend">Pendiente</span></td></tr>`).join(''):'<tr><td colspan="3">Sin registros pendientes.</td></tr>'}</table></div>`;
+  <div class="card"><h3>Registros pendientes</h3><div class="table-scroll"><table><tr><th>Código</th><th>Fecha de captura</th><th>Estado</th></tr>
+  ${pend.length?pend.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.sync.replace('Pendiente de sincronización · ',''))}</td><td><span class="estado pend">Pendiente</span></td></tr>`).join(''):'<tr><td colspan="3">Sin registros pendientes.</td></tr>'}</table></div></div>`;
 }
 function sincronizar(){
   let n=0; db.lotes.forEach(l=>{ if(l.sync.startsWith('Pendiente')){ l.sync='Sincronizado'; if(l.estado==='Pendiente') l.estado='Registrado'; n++; } });
   aud('Sincronización', n+' registro(s) pendiente(s) cerrados'); guardarDB(); ir('offline'); toast(n+' registro(s) sincronizados.');
 }
 function vConsulta(){
+  ultimaConsulta=db.lotes.slice();
   return `<h2>Consulta y búsqueda de lotes <small>(RF03 · RF08 · RNF05)</small></h2>
   <div class="card"><form onsubmit="buscar(event)"><div class="grid">
     <label>Código, línea o fecha <input id="busq" placeholder="Ej. LOTE-2026-001 o L1" autocomplete="off"></label>
     <label>Fecha exacta <input id="busqFecha" type="date"></label>
-  </div><button class="btn" type="submit">Buscar</button></form>
+  </div><button class="btn" type="submit">Buscar</button>
+  ${tiene('escanear')?'<button class="btn ghost" type="button" onclick="ir(\'escanear\')">📷 Escanear código</button>':''}</form>
   <div id="tiempo" class="msg"></div></div>
-  <div class="card" id="resultados">${tablaLotes(db.lotes)}</div>`;
+  <div class="card" id="resultados">${tablaConDescarga(ultimaConsulta)}</div>`;
 }
 function tablaLotes(lista){
   return `<table><tr><th>Código</th><th>Línea</th><th>Fecha</th><th>Cantidad</th><th>Estado</th><th>Ubicación</th></tr>
   ${lista.length?lista.map(l=>`<tr><td>${esc(l.codigo)}</td><td>${esc(l.linea)}</td><td>${esc(l.fecha)}</td><td>${l.cantidad}</td><td><span class="estado ${l.estado==='Validado'?'ok':'pend'}">${esc(l.estado)}</span></td><td>${esc(l.ubicacion)}</td></tr>`).join(''):'<tr><td colspan="6">Sin resultados.</td></tr>'}</table>`;
+}
+function tablaConDescarga(lista){
+  return tablaLotes(lista)+'<div class="acciones-tabla"><button class="btn small ghost" onclick="descargarConsultaCSV()">⬇ Descargar CSV</button></div>';
 }
 function buscar(e){
   e.preventDefault(); const t0=performance.now();
   const q=val('busq').toLowerCase(), f=val('busqFecha');
   const r=db.lotes.filter(l=>(!q||l.codigo.toLowerCase().includes(q)||l.linea.toLowerCase().includes(q)||l.fecha.includes(q))&&(!f||l.fecha===f));
   const ms=performance.now()-t0;
-  document.getElementById('resultados').innerHTML=tablaLotes(r);
+  ultimaConsulta=r;
+  document.getElementById('resultados').innerHTML=tablaConDescarga(r);
   document.getElementById('tiempo').className='msg '+(ms<=3000?'ok':'err');
   document.getElementById('tiempo').textContent=`Consulta en ${ms.toFixed(2)} ms · umbral RNF05 ≤ 3000 ms (p95): ${ms<=3000?'CUMPLE':'NO CUMPLE'} · ${r.length} resultado(s)`;
   aud('Consulta de lotes', `filtro="${q}" fecha="${f}" · ${r.length} resultados · ${ms.toFixed(1)} ms`); guardarDB();
+}
+function descargarConsultaCSV(){
+  if(!ultimaConsulta.length) return toast('No hay resultados para descargar.');
+  const filas=[['AgroVerde S.A.C. — Consulta de lotes'],['Generado',ahora()],[],
+    ['Código','Línea','Fecha','Cantidad','Estado','Ubicación']].concat(ultimaConsulta.map(l=>[l.codigo,l.linea,l.fecha,l.cantidad,l.estado,l.ubicacion]));
+  guardarCSV(filas,'consulta_lotes_'+new Date().toISOString().slice(0,10)+'.csv');
+  aud('Descarga de reporte CSV','Consulta de lotes · '+ultimaConsulta.length+' fila(s)'); guardarDB();
+  toast('Consulta descargada en CSV.');
 }
 function vIngreso(){
   return `<h2>Ingreso a almacén y stock <small>(RF04 · CU04)</small></h2>
@@ -229,9 +456,9 @@ function vIngreso(){
     <label>Cantidad <input id="ingCant" type="number" min="1" required></label>
     <label>Motivo <select id="ingMotivo"><option>Ingreso de producción</option><option>Devolución</option><option>Ajuste</option></select></label>
   </div><button class="btn" type="submit">Registrar ingreso</button></form></div>
-  <div class="card"><h3>Stock actual</h3><table><tr><th>Lote</th><th>Stock</th></tr>${Object.entries(db.stock).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join('')}</table>
-  <h3>Movimientos</h3><table><tr><th>Fecha</th><th>Lote</th><th>Cantidad</th><th>Motivo</th></tr>
-  ${db.movimientos.length?db.movimientos.map(m=>`<tr><td>${esc(m.fecha)}</td><td>${esc(m.lote)}</td><td>${m.cantidad}</td><td>${esc(m.motivo)}</td></tr>`).join(''):'<tr><td colspan="4">Sin movimientos.</td></tr>'}</table></div>`;
+  <div class="card"><h3>Stock actual</h3><div class="table-scroll"><table><tr><th>Lote</th><th>Stock</th></tr>${Object.entries(db.stock).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join('')}</table></div>
+  <h3>Movimientos</h3><div class="table-scroll"><table><tr><th>Fecha</th><th>Lote</th><th>Cantidad</th><th>Motivo</th></tr>
+  ${db.movimientos.length?db.movimientos.map(m=>`<tr><td>${esc(m.fecha)}</td><td>${esc(m.lote)}</td><td>${m.cantidad}</td><td>${esc(m.motivo)}</td></tr>`).join(''):'<tr><td colspan="4">Sin movimientos.</td></tr>'}</table></div></div>`;
 }
 function registrarIngreso(e){
   e.preventDefault(); const lote=val('ingLote'), cant=Number(val('ingCant'));
@@ -244,15 +471,15 @@ function registrarIngreso(e){
 function vConciliacion(){
   const filas=db.pedidos.map(p=>{const s=db.stock[p.lote]||0;return {lote:p.lote,stock:s,pedido:p.cantidad,diferencia:s-p.cantidad};});
   return `<h2>Conciliación de stock y pedidos <small>(RF05 · CU05 / CU05a)</small></h2>
-  <div class="card"><table><tr><th>Lote</th><th>Stock</th><th>Pedidos comprometidos</th><th>Diferencia</th></tr>
-  ${filas.map(f=>`<tr><td>${esc(f.lote)}</td><td>${f.stock}</td><td>${f.pedido}</td><td><span class="estado ${f.diferencia<0?'bad':'ok'}">${f.diferencia}</span></td></tr>`).join('')}</table></div>
+  <div class="card"><div class="table-scroll"><table><tr><th>Lote</th><th>Stock</th><th>Pedidos comprometidos</th><th>Diferencia</th></tr>
+  ${filas.map(f=>`<tr><td>${esc(f.lote)}</td><td>${f.stock}</td><td>${f.pedido}</td><td><span class="estado ${f.diferencia<0?'bad':'ok'}">${f.diferencia}</span></td></tr>`).join('')}</table></div></div>
   <div class="card"><form onsubmit="registrarDiferencia(event)"><div class="grid">
     <label>Lote <select id="difLote">${db.lotes.map(l=>`<option value="${esc(l.codigo)}">${esc(l.codigo)}</option>`).join('')}</select></label>
     <label>Diferencia física <input id="difCant" type="number" required></label>
     <label>Motivo <input id="difMotivo" required placeholder="Ej. merma detectada"></label>
   </div><button class="btn" type="submit">Registrar diferencia (RN08)</button></form></div>
-  <div class="card"><h3>Diferencias registradas</h3><table><tr><th>Fecha</th><th>Lote</th><th>Diferencia</th><th>Motivo</th><th>Responsable</th></tr>
-  ${db.conciliaciones.length?db.conciliaciones.map(c=>`<tr><td>${esc(c.fecha)}</td><td>${esc(c.lote)}</td><td>${c.cantidad}</td><td>${esc(c.motivo)}</td><td>${esc(c.usuario)}</td></tr>`).join(''):'<tr><td colspan="5">Sin diferencias registradas.</td></tr>'}</table></div>`;
+  <div class="card"><h3>Diferencias registradas</h3><div class="table-scroll"><table><tr><th>Fecha</th><th>Lote</th><th>Diferencia</th><th>Motivo</th><th>Responsable</th></tr>
+  ${db.conciliaciones.length?db.conciliaciones.map(c=>`<tr><td>${esc(c.fecha)}</td><td>${esc(c.lote)}</td><td>${c.cantidad}</td><td>${esc(c.motivo)}</td><td>${esc(c.usuario)}</td></tr>`).join(''):'<tr><td colspan="5">Sin diferencias registradas.</td></tr>'}</table></div></div>`;
 }
 function registrarDiferencia(e){
   e.preventDefault();
@@ -268,8 +495,8 @@ function vPersonal(){
     <label>Vigencia del consentimiento <input id="trFin" type="date" required></label>
   </div><label><input id="trVigente" type="checkbox" checked style="width:auto;margin-right:8px"> Consentimiento informado vigente (Ley N.° 29733)</label>
   <button class="btn" type="submit">Guardar trabajador</button></form></div>
-  <div class="card"><table><tr><th>DNI</th><th>Nombre</th><th>Cargo</th><th>Vigencia</th><th>Estado del legajo</th></tr>
-  ${db.trabajadores.map(t=>`<tr><td>${esc(t.dni)}</td><td>${esc(t.nombre)}</td><td>${esc(t.cargo)}</td><td>${esc(t.fin)}</td><td><span class="estado ${t.estado==='ACTIVO'?'ok':'bad'}">${esc(t.estado)}</span></td></tr>`).join('')}</table></div>`;
+  <div class="card"><div class="table-scroll"><table><tr><th>DNI</th><th>Nombre</th><th>Cargo</th><th>Vigencia</th><th>Estado del legajo</th></tr>
+  ${db.trabajadores.map(t=>`<tr><td>${esc(t.dni)}</td><td>${esc(t.nombre)}</td><td>${esc(t.cargo)}</td><td>${esc(t.fin)}</td><td><span class="estado ${t.estado==='ACTIVO'?'ok':'bad'}">${esc(t.estado)}</span></td></tr>`).join('')}</table></div></div>`;
 }
 function registrarTrabajador(e){
   e.preventDefault(); const dni=val('trDni');
@@ -286,8 +513,8 @@ function vDocumentos(){
     <label>Lote validado <select id="docLote">${db.lotes.filter(l=>l.estado==='Validado').map(l=>`<option value="${esc(l.codigo)}">${esc(l.codigo)}</option>`).join('')}</select></label>
     <label>Tipo <select id="docTipo"><option>Factura</option><option>Packing list</option></select></label>
   </div><button class="btn" type="submit">Generar documento</button></form></div>
-  <div class="card"><h3>Documentos emitidos</h3><table><tr><th>Fecha</th><th>Tipo</th><th>Lote</th><th>N.°</th></tr>
-  ${db.documentos.length?db.documentos.map(d=>`<tr><td>${esc(d.fecha)}</td><td>${esc(d.tipo)}</td><td>${esc(d.lote)}</td><td>${esc(d.numero)}</td></tr>`).join(''):'<tr><td colspan="4">Sin documentos emitidos.</td></tr>'}</table></div>`;
+  <div class="card"><h3>Documentos emitidos</h3><div class="table-scroll"><table><tr><th>Fecha</th><th>Tipo</th><th>Lote</th><th>N.°</th></tr>
+  ${db.documentos.length?db.documentos.map(d=>`<tr><td>${esc(d.fecha)}</td><td>${esc(d.tipo)}</td><td>${esc(d.lote)}</td><td>${esc(d.numero)}</td></tr>`).join(''):'<tr><td colspan="4">Sin documentos emitidos.</td></tr>'}</table></div></div>`;
 }
 function generarDocumento(e){
   e.preventDefault(); const lote=val('docLote'), tipo=val('docTipo');
@@ -299,28 +526,45 @@ function generarDocumento(e){
   <table><tr><th>Lote</th><th>Línea</th><th>Fecha</th><th>Cantidad</th><th>Destino</th></tr>
   <tr><td>${esc(l.codigo)}</td><td>${esc(l.linea)}</td><td>${esc(l.fecha)}</td><td>${l.cantidad}</td><td>Cliente de exportación</td></tr></table>
   <p style="margin-top:18px">Documento generado electrónicamente · ${esc(ahora())}</p>
-  <button class="btn" onclick="imprimir()">Imprimir</button> <button class="btn ghost" onclick="cerrarModal()">Cerrar</button>`);
+  <button class="btn" onclick="imprimir()">Imprimir / guardar PDF</button> <button class="btn ghost" onclick="cerrarModal()">Cerrar</button>`);
   ir('documentos');
 }
 function vTrazabilidad(){
   return `<h2>Reporte de trazabilidad <small>(RF09 · CU08)</small></h2>
   <div class="card"><label>Seleccionar lote <select id="trzLote">${db.lotes.map(l=>`<option value="${esc(l.codigo)}">${esc(l.codigo)}</option>`).join('')}</select></label>
-  <button class="btn" onclick="verTrazabilidad()">Generar reporte</button></div>
+  <button class="btn" onclick="verTrazabilidad()">Generar reporte</button>
+  ${tiene('escanear')?'<button class="btn ghost" type="button" onclick="ir(\'escanear\')">📷 Escanear lote</button>':''}</div>
   <div class="card" id="trzSalida">Seleccione un lote y genere el reporte.</div>`;
 }
-function verTrazabilidad(){
-  const lote=val('trzLote'); const eventos=[];
+function eventosLote(lote){
+  const eventos=[];
   db.lotes.filter(l=>l.codigo===lote).forEach(l=>eventos.push({f:l.fecha,t:'Cierre de lote',d:'Línea '+l.linea+' · '+l.cantidad+' uds · '+l.estado}));
   db.movimientos.filter(m=>m.lote===lote).forEach(m=>eventos.push({f:m.fecha,t:'Ingreso a almacén',d:'+'+m.cantidad+' · '+m.motivo}));
   db.conciliaciones.filter(c=>c.lote===lote).forEach(c=>eventos.push({f:c.fecha,t:'Conciliación',d:c.cantidad+' · '+c.motivo}));
   db.consumo.filter(c=>c.lote===lote).forEach(c=>eventos.push({f:c.fecha,t:'Agua y mermas',d:c.agua+' L · '+c.mermas+' kg'}));
   db.documentos.filter(d=>d.lote===lote).forEach(d=>eventos.push({f:d.fecha,t:d.tipo,d:'N.° '+d.numero}));
   db.auditoria.filter(a=>a.detalle.includes(lote)).forEach(a=>eventos.push({f:a.fecha,t:a.accion,d:a.detalle}));
+  return eventos;
+}
+function verTrazabilidad(){
+  const lote=val('trzLote'); const eventos=eventosLote(lote);
+  ultimoReporte={lote:lote,eventos:eventos};
   document.getElementById('trzSalida').innerHTML=`<h3>Línea de tiempo: ${esc(lote)}</h3>
-  <table><tr><th>Fecha</th><th>Evento</th><th>Detalle</th></tr>
-  ${eventos.map(x=>`<tr><td>${esc(x.f)}</td><td>${esc(x.t)}</td><td>${esc(x.d)}</td></tr>`).join('')}</table>
-  <p style="margin-top:14px"><button class="btn" onclick="imprimir()">Imprimir reporte</button></p>`;
+  <div class="table-scroll"><table><tr><th>Fecha</th><th>Evento</th><th>Detalle</th></tr>
+  ${eventos.map(x=>`<tr><td>${esc(x.f)}</td><td>${esc(x.t)}</td><td>${esc(x.d)}</td></tr>`).join('')}</table></div>
+  <p class="acciones-tabla" style="margin-top:14px">
+    <button class="btn" onclick="descargarCSV()">⬇ Descargar CSV</button>
+    <button class="btn ghost" onclick="imprimir()">🖨 Guardar PDF (imprimir)</button>
+  </p>`;
   aud('Reporte de trazabilidad', lote); guardarDB();
+}
+function descargarCSV(){
+  if(!ultimoReporte) return toast('Primero genera un reporte de trazabilidad.');
+  const filas=[['AgroVerde S.A.C. — Reporte de trazabilidad'],['Lote',ultimoReporte.lote],['Generado',ahora()],[],
+    ['Fecha','Evento','Detalle']].concat(ultimoReporte.eventos.map(e=>[e.f,e.t,e.d]));
+  guardarCSV(filas,'trazabilidad_'+ultimoReporte.lote+'_'+new Date().toISOString().slice(0,10)+'.csv');
+  aud('Descarga de reporte CSV', 'Trazabilidad · '+ultimoReporte.lote); guardarDB();
+  toast('Reporte descargado en CSV.');
 }
 function vConsumo(){
   return `<h2>Consumo de agua y mermas <small>(RF10 · CU09)</small></h2>
@@ -329,20 +573,156 @@ function vConsumo(){
     <label>Agua (litros) <input id="conAgua" type="number" min="0" required></label>
     <label>Mermas (kg) <input id="conMermas" type="number" min="0" required></label>
   </div><button class="btn" type="submit">Registrar consumo</button></form></div>
-  <div class="card"><table><tr><th>Fecha</th><th>Lote</th><th>Agua (L)</th><th>Mermas (kg)</th></tr>
-  ${db.consumo.length?db.consumo.map(c=>`<tr><td>${esc(c.fecha)}</td><td>${esc(c.lote)}</td><td>${c.agua}</td><td>${c.mermas}</td></tr>`).join(''):'<tr><td colspan="4">Sin registros.</td></tr>'}</table></div>`;
+  <div class="card"><div class="table-scroll"><table><tr><th>Fecha</th><th>Lote</th><th>Agua (L)</th><th>Mermas (kg)</th></tr>
+  ${db.consumo.length?db.consumo.map(c=>`<tr><td>${esc(c.fecha)}</td><td>${esc(c.lote)}</td><td>${c.agua}</td><td>${c.mermas}</td></tr>`).join(''):'<tr><td colspan="4">Sin registros.</td></tr>'}</table></div></div>`;
 }
 function registrarConsumo(e){
   e.preventDefault(); db.consumo.unshift({fecha:ahora(),lote:val('conLote'),agua:Number(val('conAgua')),mermas:Number(val('conMermas'))});
   aud('Registro ambiental', val('conLote')); guardarDB(); ir('consumo'); toast('Consumo y mermas registrados por lote.');
 }
+
+/* ---------- Auditoría, respaldos y reportes ---------- */
 function vAuditoria(){
   return `<h2>Auditoría del sistema <small>(CL06 · RN10)</small></h2>
-  <div class="card"><table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
-  ${db.auditoria.map(a=>`<tr><td>${esc(a.fecha)}</td><td>${esc(a.usuario)}</td><td>${esc(a.accion)}</td><td>${esc(a.detalle)}</td></tr>`).join('')}</table></div>
+  <div class="card">
+    <div class="acciones-tabla">
+      <button class="btn small" onclick="exportarDatos()">⬆ Exportar JSON</button>
+      <button class="btn small ghost" onclick="document.getElementById('archivoImportar').click()">⬇ Importar JSON</button>
+      <input id="archivoImportar" type="file" accept="application/json,.json" class="hidden" onchange="importarDatos(event)">
+      <button class="btn small ghost" onclick="descargarAuditoriaCSV()">⬇ Descargar auditoría CSV</button>
+    </div>
+    <p class="hint">El respaldo JSON conserva usuarios, lotes, stock, trabajadores y bitácora. Permite pasar datos entre dispositivos sin backend; la sincronización sigue siendo simulada.</p>
+  </div>
+  <div class="card"><h3>Bitácora</h3><div class="table-scroll"><table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr>
+  ${db.auditoria.map(a=>`<tr><td>${esc(a.fecha)}</td><td>${esc(a.usuario)}</td><td>${esc(a.accion)}</td><td>${esc(a.detalle)}</td></tr>`).join('')}</table></div></div>
   <div class="card"><button class="btn warn" onclick="restablecer()">Restablecer datos de prueba</button></div>`;
 }
-function restablecer(){ if(!confirm('¿Restablecer la base de datos a los datos semilla?')) return; db=semilla(); db.session=actual; guardarDB(); ir('inicio'); toast('Datos restablecidos.'); }
+function descargarAuditoriaCSV(){
+  const filas=[['AgroVerde S.A.C. — Auditoría'],['Generado',ahora()],[],['Fecha','Usuario','Acción','Detalle']]
+    .concat(db.auditoria.map(a=>[a.fecha,a.usuario,a.accion,a.detalle]));
+  guardarCSV(filas,'auditoria_'+new Date().toISOString().slice(0,10)+'.csv');
+  aud('Descarga de auditoría CSV', db.auditoria.length+' registro(s)'); guardarDB();
+  toast('Auditoría descargada en CSV.');
+}
+function exportarDatos(){
+  const nombre='agroverde_respaldo_'+new Date().toISOString().slice(0,10)+'.json';
+  const payload=Object.assign({},db,{_export:{app:'AgroVerde S.A.C.',version:1,fecha:ahora(),usuario:actual?actual.usuario:''}});
+  descargarBlob(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),nombre);
+  aud('Exportación de datos', nombre); guardarDB(); toast('Respaldo JSON descargado.');
+}
+function importarDatos(e){
+  const file=e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    try{
+      const datos=JSON.parse(reader.result);
+      if(!datos || typeof datos!=='object' || !Array.isArray(datos.lotes) || !datos.stock || typeof datos.stock!=='object'){
+        throw new Error('El archivo no tiene el formato AgroVerde.');
+      }
+      if(!confirm('Se reemplazarán los datos de este dispositivo con "'+file.name+'". ¿Continuar?')){ e.target.value=''; return; }
+      const sesion=db.session, modo=db.modoOffline, cache=Object.assign({},db.cache||{});
+      const base=semilla();
+      const normal=Object.assign(base,datos);
+      ['lotes','movimientos','conciliaciones','documentos','consumo','pedidos','trabajadores','auditoria','usuarios'].forEach(function(k){
+        if(!Array.isArray(normal[k])) normal[k]=base[k];
+      });
+      if(!normal.stock || typeof normal.stock!=='object') normal.stock=base.stock;
+      if(!normal.cache || typeof normal.cache!=='object') normal.cache={};
+      normal.cache=Object.assign({},cache,normal.cache,datos.cache||{});
+      if(!normal.usuarios.length) normal.usuarios=USUARIOS_SEMILLA.map(u=>({...u}));
+      const actualPrevio=listaUsuarios().find(u=>actual && u.usuario===actual.usuario);
+      if(actualPrevio && !normal.usuarios.some(u=>u.usuario===actualPrevio.usuario)) normal.usuarios.unshift(actualPrevio);
+      normal.session=sesion;
+      normal.modoOffline=modo;
+      delete normal._export;
+      normal.auditoria.unshift({fecha:ahora(),usuario:actual?actual.nombre:'Sistema',accion:'Importación de datos',detalle:file.name});
+      db=normal; guardarDB(); renderUsuariosLogin(); ir('auditoria'); toast('Datos importados correctamente.');
+    }catch(err){ toast('No se pudo importar: '+(err.message||'formato inválido')); }
+    e.target.value='';
+  };
+  reader.onerror=function(){ toast('No se pudo leer el archivo.'); e.target.value=''; };
+  reader.readAsText(file);
+}
+function restablecer(){
+  if(!confirm('¿Restablecer la base de datos a los datos semilla?')) return;
+  db=semilla();
+  db.session=actual?Object.assign({},actual,{ultimaActividad:ultimaActividad}):null;
+  guardarDB(); renderUsuariosLogin(); ir('inicio'); toast('Datos restablecidos.');
+}
+
+/* ---------- Gestión de usuarios (solo Administrador) ---------- */
+function vUsuarios(){
+  const usuarios=listaUsuarios();
+  return `<h2>Gestión de usuarios <small>(módulo de Administrador)</small></h2>
+  <div class="card"><h3>Nuevo usuario</h3><form onsubmit="crearUsuario(event)"><div class="grid">
+    <label>Usuario <input id="usuNuevo" required placeholder="Ej. operario2" autocomplete="off"></label>
+    <label>Nombre completo <input id="usuNom" required placeholder="Ej. Rosa Mendoza"></label>
+    <label>Rol / puesto <select id="usuRol">${Object.keys(MODULOS).map(r=>`<option>${esc(r)}</option>`).join('')}</select></label>
+    <label>Línea asignada <input id="usuLinea" placeholder="L1, L2 o L3 (opcional)"></label>
+    <label>Contraseña <input id="usuPass" type="password" required minlength="4" autocomplete="new-password"></label>
+  </div><button class="btn" type="submit">Crear usuario</button></form>
+  <p class="hint">Las contraseñas nunca se muestran en la lista. El administrador puede cambiarlas cuando sea necesario.</p></div>
+  <div class="card"><h3>Usuarios registrados <span class="alerta-count">${usuarios.length}</span></h3>
+  <div class="table-scroll"><table><tr><th>Usuario</th><th>Nombre</th><th>Puesto</th><th>Línea</th><th>Estado</th><th>Acciones</th></tr>
+  ${usuarios.map(u=>`<tr>
+    <td>${esc(u.usuario)}</td><td>${esc(u.nombre)}</td><td>${esc(u.rol)}</td><td>${esc(u.linea||'—')}</td>
+    <td><span class="estado ${u.activo!==false?'ok':'bad'}">${u.activo!==false?'Activo':'Baja'}</span></td>
+    <td><div class="acciones-tabla">
+      <button class="btn small ghost" onclick="toggleUsuario('${esc(u.usuario)}')">${u.activo!==false?'Dar de baja':'Activar'}</button>
+      <button class="btn small ghost" onclick="cambiarClaveUsuario('${esc(u.usuario)}')">Cambiar clave</button>
+      <button class="btn small ghost" onclick="editarUsuario('${esc(u.usuario)}')">Editar puesto</button>
+      <button class="btn small warn" onclick="eliminarUsuario('${esc(u.usuario)}')">Eliminar</button>
+    </div></td>
+  </tr>`).join('')}</table></div></div>`;
+}
+function crearUsuario(e){
+  e.preventDefault();
+  const usuario=val('usuNuevo').toLowerCase().replace(/\s+/g,'');
+  const pass=val('usuPass');
+  if(!usuario) return toast('Ingrese un usuario.');
+  if(listaUsuarios().some(u=>u.usuario===usuario)) return toast('Ese usuario ya existe.');
+  if(pass.length<4) return toast('La contraseña debe tener al menos 4 caracteres.');
+  db.usuarios.push({usuario,pass,nombre:val('usuNom'),rol:val('usuRol'),linea:val('usuLinea'),activo:true});
+  aud('Alta de usuario', usuario+' · '+val('usuRol')); guardarDB(); renderUsuariosLogin(); ir('usuarios'); toast('Usuario creado correctamente.');
+}
+function toggleUsuario(usuario){
+  const u=listaUsuarios().find(x=>x.usuario===usuario); if(!u) return;
+  if(usuario===actual.usuario) return toast('No puedes dar de baja tu propio usuario.');
+  u.activo=(u.activo===false);
+  aud(u.activo?'Activación de usuario':'Baja de usuario', usuario);
+  guardarDB(); renderUsuariosLogin(); ir('usuarios'); toast(u.activo?'Usuario activado.':'Usuario dado de baja.');
+}
+function cambiarClaveUsuario(usuario){
+  const u=listaUsuarios().find(x=>x.usuario===usuario); if(!u) return;
+  const nueva=prompt('Nueva contraseña para '+usuario+' (no se mostrará en pantalla):');
+  if(nueva===null) return;
+  if(nueva.trim().length<4) return toast('La contraseña debe tener al menos 4 caracteres.');
+  u.pass=nueva.trim();
+  db.cache[usuario]=u.pass;
+  aud('Cambio de contraseña', usuario); guardarDB(); toast('Contraseña actualizada.');
+}
+function editarUsuario(usuario){
+  const u=listaUsuarios().find(x=>x.usuario===usuario); if(!u) return;
+  const rol=prompt('Puesto del usuario. Opciones: '+Object.keys(MODULOS).join(', '),u.rol);
+  if(rol===null) return;
+  if(!MODULOS[rol]) return toast('Puesto no válido. Revise las opciones.');
+  const linea=prompt('Línea asignada (L1, L2, L3 o dejar vacío):',u.linea||'');
+  if(linea===null) return;
+  u.rol=rol; u.linea=linea.trim();
+  if(actual && actual.usuario===usuario){
+    actual.rol=rol; actual.linea=u.linea||'—'; db.session=actual;
+  }
+  aud('Cambio de puesto', usuario+' → '+rol+(u.linea?' / '+u.linea:'')); guardarDB();
+  refrescarMenu(); actualizarCabecera(); renderUsuariosLogin(); ir('usuarios');
+}
+function eliminarUsuario(usuario){
+  if(usuario===actual.usuario) return toast('No puedes eliminar tu propio usuario.');
+  if(!confirm('¿Eliminar definitivamente al usuario '+usuario+'?')) return;
+  db.usuarios=db.usuarios.filter(x=>x.usuario!==usuario);
+  delete db.cache[usuario];
+  aud('Eliminación de usuario', usuario); guardarDB(); renderUsuariosLogin(); ir('usuarios'); toast('Usuario eliminado.');
+}
 
 /* ---------- Asistente virtual (reglas locales, sin internet) ---------- */
 function toggleAsistente(){
@@ -352,7 +732,7 @@ function toggleAsistente(){
   if(abrir){
     const chat=document.getElementById('asistenteChat');
     if(!chat.innerHTML){
-      mensajeAsistente(`¡Hola${actual?' '+esc(actual.nombre.split(' ')[0]):''}! Soy el <b>asistente AgroVerde</b>. Puedo ayudarte a registrar lotes, trabajar sin señal, validar, consultar stock o explicar un módulo. Escribe tu pregunta o toca una opción rápida.`,'bot');
+      mensajeAsistente(`¡Hola${actual?' '+esc(actual.nombre.split(' ')[0]):''}! Soy el <b>asistente AgroVerde</b>. Puedo ayudarte a registrar lotes, escanear códigos, trabajar sin señal, validar, consultar stock o explicar un módulo. Escribe tu pregunta o toca una opción rápida.`,'bot');
     }
     setTimeout(function(){ document.getElementById('asistenteInput').focus(); },120);
   }
@@ -385,7 +765,7 @@ function responderAsistente(t){
   let r='';
 
   if(/hola|buenas|buen dia|buen día|ayuda|quién eres|quien eres|qué puedes hacer|que puedes hacer/.test(q)){
-    r='Estoy aquí para guiarte en tu turno. Puedo ayudarte con: <b>registro de lotes</b>, <b>modo offline</b>, <b>validación</b>, <b>stock</b>, <b>conciliación</b>, <b>RRHH</b>, <b>documentos</b> y <b>trazabilidad</b>. '+accion('inicio','Ver panel de inicio');
+    r='Estoy aquí para guiarte en tu turno. Puedo ayudarte con: <b>registro de lotes</b>, <b>escáner</b>, <b>modo offline</b>, <b>validación</b>, <b>stock</b>, <b>RRHH</b>, <b>documentos</b> y <b>trazabilidad</b>. '+accion('inicio','Ver panel de inicio');
   } else if(codigo){
     const l=db.lotes.find(function(x){ return x.codigo.toLowerCase()===codigo.toLowerCase(); });
     if(l){
@@ -395,6 +775,10 @@ function responderAsistente(t){
     }
   } else if(/no hay señal|sin señal|sin cobertura|offline|sin conexion|sin conexión|sincroniz|pendiente/.test(q)){
     r='Si estás en el campo sin señal, activa <b>Sin conexión</b>. El cierre se guarda como <b>Pendiente de sincronización con fecha y hora</b> (RF02). Las credenciales ya usadas quedan en caché (RN06). Al volver a tener señal, toca <b>Sincronizar</b>. '+accion('offline','Ir a Modo offline');
+  } else if(/escan|qr|barra|cámara|camera|leer código/.test(q)){
+    r=tiene('escanear')
+      ? 'Abre el <b>Escáner de lote</b> y apunta la cámara al QR o código de barras. Si tu equipo no lo soporta, usa la captura manual. '+accion('escanear','Abrir escáner')
+      : 'El escáner está disponible para Producción y Almacén. Puedes buscar el lote escribiendo su código. '+accion('consulta','Ir a Consulta');
   } else if(/registrar|cerrar|registro de cierre|captura|nuevo lote/.test(q)){
     r=actual&&actual.rol==='Operario de producción'
       ? 'Para registrar, llena <b>línea, fecha, cantidad y turno</b> en Registro de cierre. Como operario solo puedes cerrar lotes de tu línea <b>'+esc(actual.linea)+'</b> (RN07). '+accion('cierre','Registrar cierre')
@@ -412,13 +796,21 @@ function responderAsistente(t){
     const bloqueados=db.trabajadores.filter(function(x){return x.estado.indexOf('BLOQUEADO')===0;}).length;
     r='En <b>Datos y consentimiento</b> se registran los trabajadores. Sin consentimiento vigente el legajo queda <b>BLOQUEADO</b> (RF11 / RN09). Actualmente hay <b>'+bloqueados+'</b> legajo(s) bloqueado(s). '+accion('personal','Ir a Datos y consentimiento');
   } else if(/documento|factura|packing|exporta/.test(q)){
-    r='En <b>Documentos</b> generas factura y packing list. Recuerda: solo se pueden emitir para lotes <b>Validados</b> (RN04) y se pueden imprimir. '+accion('documentos','Ir a Documentos');
+    r='En <b>Documentos</b> generas factura y packing list. Recuerda: solo se pueden emitir para lotes <b>Validados</b> (RN04) y se pueden guardar como PDF al imprimir. '+accion('documentos','Ir a Documentos');
   } else if(/trazab|reporte|historial|rastre/.test(q)){
-    r='El reporte de <b>Trazabilidad</b> muestra la línea de tiempo de un lote: cierre, ingreso, conciliación, agua/mermas y documentos (RF09 / CU08). '+accion('trazabilidad','Ir a Trazabilidad');
+    r='El reporte de <b>Trazabilidad</b> muestra la línea de tiempo de un lote y se puede <b>descargar en CSV o guardar como PDF</b> (RF09 / CU08). '+accion('trazabilidad','Ir a Trazabilidad');
   } else if(/agua|merma|ambient|consumo/.test(q)){
     r='En <b>Agua y mermas</b> registras litros y kilogramos por lote (RF10 / CU09). Ese dato aparece después en el reporte de trazabilidad. '+accion('consumo','Ir a Agua y mermas');
+  } else if(/exportar|importar|respaldo|backup|json|copia de datos/.test(q)){
+    r=tiene('auditoria')
+      ? 'En <b>Auditoría y respaldos</b> puedes exportar/importar un <b>JSON</b> con todos los datos y descargar la bitácora en CSV. Útil para llevar información entre dispositivos. '+accion('auditoria','Ir a Respaldos')
+      : 'Los respaldos JSON se gestionan desde <b>Auditoría</b>, disponible para Gerencia y Administrador.';
+  } else if(/crear usuario|nuevo usuario|dar de baja|gestión de usuarios|gestion de usuarios/.test(q)){
+    r=tiene('usuarios')
+      ? 'Como Administrador puedes crear usuarios, darlos de baja, cambiar claves y editar puestos en <b>Gestión de usuarios</b>. Las contraseñas nunca se muestran en la lista. '+accion('usuarios','Ir a Gestión de usuarios')
+      : 'La gestión de usuarios la hace el <b>Administrador</b>. Tu usuario y puesto están asignados desde el acceso.';
   } else if(/auditor|quién hizo|quien hizo|cambio|registro de actividad/.test(q)){
-    r='La <b>Auditoría</b> guarda cada acción con usuario y fecha (CL06 / RN10). Podrás ver quién registró, validó o cambió algo. '+accion('auditoria','Ir a Auditoría');
+    r='La <b>Auditoría</b> guarda cada acción con usuario y fecha (CL06 / RN10). Podrás ver quién registró, validó o cambió algo y descargarlo en CSV. '+accion('auditoria','Ir a Auditoría');
   } else if(/contraseña|password|clave|usuario|ingresar|login/.test(q)){
     r='En la pantalla de acceso solo mostramos el <b>usuario por puesto</b>; cada persona conoce su contraseña. Si estás sin señal, usa un usuario ya ingresado en este dispositivo (RN06). El usuario de sistema es <b>admin1</b>.';
   } else if(/resumen|cuantos|cuántos|estado general|cuánto/.test(q)){
@@ -426,11 +818,11 @@ function responderAsistente(t){
     const pend=db.lotes.filter(function(l){return l.sync.indexOf('Pendiente')===0;}).length;
     r='Resumen de este dispositivo: <b>'+db.lotes.length+'</b> lote(s), <b>'+validados+'</b> validado(s), <b>'+pend+'</b> pendiente(s) de sincronización y <b>'+Object.keys(db.stock).length+'</b> lote(s) con stock. '+accion('inicio','Ver panel');
   } else if(/buscar|consulta|busca|estado|consultar/.test(q)){
-    r='Puedes buscar por <b>código, línea o fecha</b> y la consulta muestra si cumple el objetivo de 3 segundos (RNF05). Escribe por ejemplo <b>LOTE-2026-001</b>. '+accion('consulta','Ir a Consulta');
+    r='Puedes buscar por <b>código, línea o fecha</b> y la consulta muestra si cumple el objetivo de 3 segundos (RNF05). Escribe por ejemplo <b>LOTE-2026-001</b> o usa el escáner. '+accion('consulta','Ir a Consulta');
   } else if(/gracias/.test(q)){
     r='¡Con gusto! Si te surge otra duda en el turno, aquí estoy. 🌱';
   } else {
-    r='No estoy seguro de entender. Puedo ayudarte con registro de lotes, modo offline, validación, stock, RRHH o trazabilidad. Elige una opción o escribe <b>LOTE-2026-001</b> para consultar un lote. '+accion('cierre','Registrar lote')+' '+accion('offline','Modo offline');
+    r='No estoy seguro de entender. Puedo ayudarte con registro de lotes, escáner, modo offline, validación, stock, RRHH o trazabilidad. Elige una opción o escribe <b>LOTE-2026-001</b> para consultar un lote. '+accion('cierre','Registrar lote')+' '+accion('offline','Modo offline');
   }
   mensajeAsistente(r,'bot');
 }
@@ -467,13 +859,14 @@ function mostrarAvisoInactividad(){
 }
 function continuarSesion(){ cerrarModal(); registrarActividad(true); toast('Sesión extendida por 10 minutos más.'); }
 function cerrarPorInactividad(silencioso){
-  limpiarTemporizadores();
+  limpiarTemporizadores(); detenerEscaneo(true);
   if(actual) aud('Cierre por inactividad', 'Sesión finalizada automáticamente tras 10 min sin actividad');
   db.session=null; guardarDB(); actual=null;
   document.getElementById('app').classList.add('hidden');
   document.getElementById('asistente').classList.add('hidden');
   document.getElementById('login').classList.remove('hidden');
   document.getElementById('modal').classList.add('hidden');
+  renderUsuariosLogin();
   if(!silencioso) toast('Sesión cerrada por inactividad. Vuelve a ingresar.');
 }
 ['click','keydown','touchstart','scroll','mousemove'].forEach(function(ev){
@@ -482,9 +875,11 @@ function cerrarPorInactividad(silencioso){
 
 /* ---------- Arranque ---------- */
 db=cargarDB();
+renderUsuariosLogin();
 if(db.session){
-  actual=USUARIOS.find(u=>u.usuario===db.session.usuario)
+  actual=listaUsuarios().find(u=>u.usuario===db.session.usuario && u.activo!==false)
     ? {usuario:db.session.usuario,nombre:db.session.nombre,rol:db.session.rol,linea:db.session.linea}
     : null;
   if(actual) renderApp();
+  else { db.session=null; guardarDB(); }
 }

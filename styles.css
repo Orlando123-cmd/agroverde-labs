@@ -318,6 +318,57 @@ tbody tr:last-child td{border-bottom:0}
   .asistente-fab{width:54px;height:54px;font-size:23px}
   .asistente-panel{position:fixed;left:10px;right:10px;bottom:78px;width:auto;max-width:none;height:62vh;max-height:70vh}
 }
+/* ---------- Alertas del inicio ---------- */
+.alertas-card{padding-bottom:14px}
+.alerta-count{
+  font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--brand);background:var(--brand-soft);border:1px solid #d3e8dc;
+  padding:5px 10px;border-radius:999px;white-space:nowrap
+}
+.alertas-lista{display:grid;gap:10px}
+.alerta-item{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-sm);
+  background:var(--surface-2);border:1px solid var(--line);border-left:4px solid var(--amber)
+}
+.alerta-item.bad{border-left-color:var(--red);background:#fffafa}
+.alerta-icono{
+  width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;
+  background:var(--amber-soft);font-size:17px
+}
+.alerta-item.bad .alerta-icono{background:var(--red-soft)}
+.alerta-texto{flex:1;min-width:0}
+.alerta-texto b{display:block;font-size:13.5px;color:var(--ink)}
+.alerta-texto small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+
+/* ---------- Escáner ---------- */
+.scanner-box{
+  position:relative;width:100%;aspect-ratio:16/9;max-height:340px;overflow:hidden;border-radius:var(--r-sm);
+  background:#0a1a14;display:grid;place-items:center;border:1px solid #244235
+}
+.scanner-box video{width:100%;height:100%;object-fit:cover;display:block}
+.scanner-marca{
+  position:absolute;width:min(62%,300px);aspect-ratio:1;border:2px dashed rgba(255,255,255,.75);
+  border-radius:16px;box-shadow:0 0 0 999px rgba(5,25,17,.28);pointer-events:none
+}
+.scanner-overlay{
+  position:absolute;left:14px;right:14px;bottom:14px;z-index:2;text-align:center;
+  background:rgba(8,32,23,.86);color:#eaf6f0;border:1px solid rgba(255,255,255,.18);
+  border-radius:9px;padding:8px 10px;font-size:12px;font-weight:600
+}
+.acciones-tabla{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.acciones-tabla .btn{margin:0}
+
+/* ---------- Gestión de usuarios y respaldos ---------- */
+.code-list{font-family:"Cascadia Code",Consolas,monospace}
+
+@media (max-width:600px){
+  .alerta-item{align-items:flex-start;flex-wrap:wrap}
+  .alerta-item .btn{margin-left:46px}
+  .alerta-icono{width:32px;height:32px;flex-basis:32px}
+  .scanner-box{max-height:250px}
+  .acciones-tabla .btn{flex:1 1 auto}
+}
+
 @media print{
   .topbar,.sidebar,.btn,.banner,#toast,.modal,.asistente{display:none!important}
   main{padding:0}

@@ -18,6 +18,10 @@
 | RNF04 | Interfaz simple | — | Toda la app | Botones grandes, etiquetas claras, mensajes de confirmación |
 | RNF05 | Consultas ≤ 3 s (p95) | CU03 | Consulta y búsqueda | Medición en pantalla con semáforo CUMPLE / NO CUMPLE |
 | RF11 | Consentimiento informado (nuevo) | CU06 / HU13 | Datos y consentimiento | Alta con vigencia; sin vigencia = **BLOQUEADO** |
+| Apoyo a RF01/RF03 | Lectura de código de lote | CU01 / CU03 | Escáner de lote | Cámara con `BarcodeDetector` + captura manual; lleva el código a Consulta, Trazabilidad o cierre |
+| Apoyo a RF02/RF05/RF11 | Alertas del turno | CU02 / CU05 / CU06 | Inicio | Avisos de pendientes, stock insuficiente, legajos bloqueados y consentimientos por vencer |
+| Apoyo a RF03/RF09 | Reportes descargables | CU03 / CU08 | Consulta, Trazabilidad, Auditoría | CSV con BOM y botón «Guardar PDF (imprimir)» |
+| Apoyo a RNF01 | Respaldo y gestión de usuarios | CU00 | Auditoría y respaldos / Gestión de usuarios | Exportación e importación JSON; alta, baja y cambio de clave sin mostrar contraseñas |
 
 ## Reglas de negocio implementadas
 
