@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6b3a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AgroVerde">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<title>AgroVerde S.A.C. — Sistema de Trazabilidad de Lotes</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">🌱 AgroVerde <span>S.A.C.</span></div>
+    <h1>Sistema de Trazabilidad de Lotes</h1>
+    <p class="sub">Modelado y Desarrollo de Aplicaciones · CIIN1322P</p>
+    <form onsubmit="iniciarSesion(event)">
+      <label>Usuario <input id="usr" required autocomplete="username" placeholder="operario1"></label>
+      <label>Contraseña <input id="pass" type="password" required autocomplete="current-password" placeholder="op123"></label>
+      <button class="btn primary big" type="submit">Ingresar</button>
+    </form>
+    <div class="hint"><b>Usuarios de prueba</b><br>operario1 / op123 · jefe1 / jefe123 · almacen1 / alm123<br>rrhh1 / rrhh123 · gerencia1 / ger123 · admin1 / admin123</div>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <header>
+    <div class="brand">🌱 AgroVerde <span>S.A.C.</span></div>
+    <div class="head-right">
+      <button id="btnModo" class="btn" onclick="cambiarModo()">🌐 En línea</button>
+      <span id="badgeUsuario" class="badge"></span>
+      <button class="btn ghost" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+  <div class="layout">
+    <nav id="menu"></nav>
+    <main>
+      <div id="bannerOffline" class="banner hidden">⚠️ Modo offline activo — los registros quedan como <b>Pendiente de sincronización</b> con fecha y hora de captura.</div>
+      <div id="contenido"></div>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<div id="modal" class="modal hidden" onclick="cerrarModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="close" onclick="cerrarModal()">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

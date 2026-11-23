@@ -1,0 +1,17 @@
+{
+  "name": "AgroVerde S.A.C. — Trazabilidad de Lotes",
+  "short_name": "AgroVerde",
+  "description": "Sistema de trazabilidad de lotes de AgroVerde S.A.C. (CIIN1322P). Funciona sin conexión.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef7f1",
+  "theme_color": "#0b6b3a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
