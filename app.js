@@ -279,22 +279,183 @@ function registrarCierre(e){
   aud('Registro de cierre', codigo+(pendiente?' (offline)':'')); guardarDB(); ir('cierre'); toast('Cierre registrado: '+codigo);
 }
 
+/* ---------- Generador de código de barras Code128-B (sin librerías) ---------- */
+// Patrones estándar Code128 (JsBarcode, MIT). 103 datos + 3 inicios + 1 parada.
+const CODE128_BARS = [
+  11011001100,11001101100,11001100110,10010011000,10010001100,10001001100,10011001000,10011000100,10001100100,11001001000,
+  11001000100,11000100100,10110011100,10011011100,10011001110,10111001100,10011101100,10011100110,11001110010,11001011100,
+  11001001110,11011100100,11001110100,11101101110,11101001100,11100101100,11100100110,11101100100,11100110100,11100110010,
+  11011011000,11011000110,11000110110,10100011000,10001011000,10001000110,10110001000,10001101000,10001100010,11010001000,
+  11000101000,11000100010,10110111000,10110001110,10001101110,10111011000,10111000110,10001110110,11101110110,11010001110,
+  11000101110,11011101000,11011100010,11011101110,11101011000,11101000110,11100010110,11101101000,11101100010,11100011010,
+  11101111010,11001000010,11110001010,10100110000,10100001100,10010110000,10010000110,10000101100,10000100110,10110010000,
+  10110000100,10011010000,10011000010,10000110100,10000110010,11000010010,11001010000,11110111010,11000010100,10001111010,
+  10100111100,10010111100,10010011110,10111100100,10011110100,10011110010,11110100100,11110010100,11110010010,11011011110,
+  11011110110,11110110110,10101111000,10100011110,10001011110,10111101000,10111100010,11110101000,11110100010,10111011110,
+  10111101110,11101011110,11110101110,11010000100,11010010000,11010011100,1100011101011
+];
+function bitsCodigo128(texto){
+  const s=String(texto||'').slice(0,40);
+  if(!s) throw new Error('Escriba un código.');
+  let suma=104, pesos='104';
+  for(let i=0;i<s.length;i++){
+    const v=s.charCodeAt(i)-32;
+    if(v<0||v>94) throw new Error('El código solo admite letras, números y guiones.');
+    pesos+=' '+v; suma+=v*(i+1);
+  }
+  pesos+=' '+(suma%103)+' 106';
+  return pesos.split(' ').map(Number).map(function(i){ return String(CODE128_BARS[i]); }).join('');
+}
+function svgCodigoBarras(texto){
+  const bits=bitsCodigo128(texto);
+  const mod=2, quiet=14, h=84, textH=34;
+  let rects='', x=quiet;
+  for(let i=0;i<bits.length;i++){
+    if(bits[i]==='1') rects+='<rect x="'+x+'" y="8" width="'+mod+'" height="'+h+'" fill="#0b1b14"/>';
+    x+=mod;
+  }
+  const total=x+quiet, alto=h+textH+16;
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+total+'" height="'+alto+'" viewBox="0 0 '+total+' '+alto+'">'+
+    '<rect width="100%" height="100%" fill="#ffffff"/>'+rects+
+    '<text x="'+(total/2)+'" y="'+(h+30)+'" font-family="Consolas,monospace" font-size="18" text-anchor="middle" fill="#14261f">'+esc(texto)+'</text></svg>';
+}
+function actualizarCodigoPrueba(){
+  const c=document.getElementById('codigoPrueba');
+  if(c) c.innerHTML=svgCodigoBarras(val('bcLote'));
+  const r=document.getElementById('resultadoVerificacion');
+  if(r){ r.className='msg'; r.textContent=''; }
+}
+function descargarCodigoPrueba(){
+  const codigo=val('bcLote');
+  descargarBlob(new Blob([svgCodigoBarras(codigo)],{type:'image/svg+xml;charset=utf-8'}),'codigo_'+codigo+'.svg');
+  aud('Descarga de código de barras', codigo); guardarDB(); toast('Código de barras descargado.');
+}
+function imprimirCodigoPrueba(){
+  const codigo=val('bcLote');
+  const w=window.open('','_blank');
+  if(!w) return toast('Permite ventanas emergentes para imprimir el código.');
+  w.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Código '+esc(codigo)+'</title>'+
+    '<style>body{font-family:Consolas,monospace;text-align:center;padding:28px}h1{font-size:22px}h2{font-size:26px;margin:18px 0}'+
+    'svg{max-width:100%;height:auto}.btn{margin-top:20px;padding:12px 20px;font-size:16px;cursor:pointer}</style></head><body>'+
+    '<h1>AgroVerde S.A.C. — Código de prueba</h1><h2>'+esc(codigo)+'</h2>'+svgCodigoBarras(codigo)+
+    '<br><button class="btn" onclick="window.print()">Imprimir código</button></body></html>');
+  w.document.close();
+}
+function decodificarBits128(bits){
+  const patrones={};
+  for(let i=0;i<CODE128_BARS.length;i++) patrones[String(CODE128_BARS[i])]=i;
+  const stop=String(CODE128_BARS[106]);
+  if(bits.slice(0,11)!==String(CODE128_BARS[104])) throw new Error('Patrón de inicio B no encontrado.');
+  let p=11, suma=104, pos=0, texto='', checksum=null;
+  while(p<bits.length){
+    if(bits.slice(p,p+stop.length)===stop) break;
+    if(p+11>bits.length) throw new Error('Código incompleto.');
+    const v=patrones[bits.slice(p,p+11)];
+    if(v===undefined) throw new Error('Patrón desconocido en el código.');
+    p+=11;
+    if(bits.slice(p,p+stop.length)===stop){ checksum=v; break; }
+    pos++; texto+=String.fromCharCode(v+32); suma+=v*pos;
+  }
+  if(checksum===null) throw new Error('No se encontró el patrón de parada.');
+  if(suma%103!==checksum) throw new Error('El checksum no coincide.');
+  return texto;
+}
+async function leerCodigo128DesdeSvg(svg){
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+  try{
+    const img=new Image();
+    await new Promise(function(res,rej){ img.onload=res; img.onerror=function(){rej(new Error('No se pudo dibujar el código.'));}; img.src=url; });
+    const canvas=document.createElement('canvas');
+    canvas.width=img.naturalWidth||900; canvas.height=img.naturalHeight||180;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(img,0,0);
+    const datos=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    const y=Math.floor(canvas.height*0.3);
+    const oscuro=function(x){ const i=(y*canvas.width+x)*4; return datos[i]<140 && datos[i+1]<140 && datos[i+2]<140; };
+    let inicio=-1;
+    for(let x=0;x<canvas.width;x++){ if(oscuro(x)){ inicio=x; break; } }
+    if(inicio<0) throw new Error('No se encontraron barras en la imagen.');
+    let fin=inicio;
+    while(fin<canvas.width && oscuro(fin)) fin++;
+    const mod=Math.max(1,Math.round((fin-inicio)/2));
+    let bits='';
+    for(let x=inicio; x+mod<=canvas.width; x+=mod){
+      const centro=Math.floor(x+mod/2);
+      bits+=oscuro(centro)?'1':'0';
+    }
+    return decodificarBits128(bits);
+  } finally { URL.revokeObjectURL(url); }
+}
+async function verificarCodigoPrueba(){
+  const codigo=val('bcLote');
+  const svg=svgCodigoBarras(codigo);
+  const salida=document.getElementById('resultadoVerificacion');
+  if(!salida) return;
+  salida.className='msg'; salida.textContent='Verificando el código...';
+  let leido='', metodo='';
+  try{
+    if('BarcodeDetector' in window){
+      const formatos=await BarcodeDetector.getSupportedFormats();
+      if(formatos.includes('code_128')){
+        const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+        try{
+          const img=new Image();
+          await new Promise(function(res,rej){ img.onload=res; img.onerror=function(){rej(new Error('No se pudo dibujar.'));}; img.src=url; });
+          const canvas=document.createElement('canvas');
+          canvas.width=img.naturalWidth||900; canvas.height=img.naturalHeight||180;
+          canvas.getContext('2d').drawImage(img,0,0);
+          const res=await new BarcodeDetector({formats:['code_128']}).detect(canvas);
+          if(res.length) leido=String(res[0].rawValue);
+          metodo='BarcodeDetector del navegador';
+        } finally { URL.revokeObjectURL(url); }
+      }
+    }
+    if(!leido){ leido=await leerCodigo128DesdeSvg(svg); metodo='lector interno Code128'; }
+    if(leido===codigo){
+      salida.className='msg ok';
+      salida.textContent='✓ Verificación correcta ('+metodo+'): el lector devolvió "'+leido+'". El código es escaneable.';
+      aud('Verificación de código de barras', codigo+' → OK ('+metodo+')');
+    } else {
+      salida.className='msg err';
+      salida.textContent='El lector devolvió "'+(leido||'ningún valor')+'" en vez de "'+codigo+'".';
+      aud('Verificación de código de barras', codigo+' → falló');
+    }
+  }catch(err){
+    salida.className='msg err';
+    salida.textContent='No se pudo verificar: '+err.message+'. Prueba escaneándolo con otro celular.';
+  }
+  guardarDB();
+}
+
 /* ---------- Escáner QR / código de barras ---------- */
 function vEscanear(){
   return `<h2>Escáner de lote <small>(apoyo a RF01 · RF03)</small></h2>
   <div class="card">
     <p>Apunta la cámara al <b>QR o código de barras</b> del lote. Al leerlo podrás verlo en Consulta, generar su trazabilidad o usar el código en un nuevo cierre.</p>
-    <div class="scanner-box">
+    <div class="scanner-box" id="camaraBox">
       <video id="camaraVideo" playsinline muted autoplay></video>
       <div class="scanner-marca"></div>
       <div id="scannerMensaje" class="scanner-overlay">Cámara apagada</div>
+      <button class="scanner-salir" onclick="detenerEscaneo()" aria-label="Cerrar cámara">✕ Salir</button>
     </div>
     <p class="acciones-tabla">
-      <button class="btn" onclick="iniciarEscaneo()">📷 Activar cámara</button>
+      <button class="btn" onclick="iniciarEscaneo()">📷 Activar cámara (pantalla completa)</button>
       <button class="btn ghost" onclick="detenerEscaneo()">⏹ Detener cámara</button>
     </p>
     <div id="resultadoEscaneo" class="msg"></div>
-    <p class="hint">La cámara necesita el link publicado (HTTPS) y permiso del navegador. Si tu equipo no la soporta, usa la captura manual de abajo.</p>
+    <p class="hint">La cámara necesita el link publicado (HTTPS) y permiso del navegador. Al activarla ocupa toda la pantalla; toca <b>Salir</b> o presiona Esc para volver. Si tu equipo no la soporta, usa la captura manual.</p>
+  </div>
+  <div class="card"><h3>Código de barras de prueba</h3>
+    <p>Genera un <b>Code128</b> real para verificar el lector. Muestra este código en otra pantalla o imprímelo y escanealo desde la cámara.</p>
+    <label>Lote del código <select id="bcLote" onchange="actualizarCodigoPrueba()">${db.lotes.map(l=>`<option value="${esc(l.codigo)}">${esc(l.codigo)}</option>`).join('')}</select></label>
+    <div id="codigoPrueba" class="codigo-barras">${svgCodigoBarras(db.lotes[0]?db.lotes[0].codigo:'LOTE-2026-001')}</div>
+    <div class="acciones-tabla">
+      <button class="btn small" onclick="descargarCodigoPrueba()">⬇ Descargar SVG</button>
+      <button class="btn small ghost" onclick="imprimirCodigoPrueba()">🖨 Imprimir código</button>
+      <button class="btn small ghost" onclick="verificarCodigoPrueba()">✓ Verificar lectura</button>
+    </div>
+    <div id="resultadoVerificacion" class="msg"></div>
+    <p class="hint">También hay una copia lista para usar en <code>codigo_barras_prueba.svg</code> dentro del ZIP.</p>
   </div>
   <div class="card"><h3>Captura manual del código</h3><form onsubmit="procesarCodigoManual(event)">
     <label>Código del lote <input id="escanManual" placeholder="LOTE-2026-001" required autocomplete="off"></label>
@@ -324,14 +485,22 @@ async function iniciarEscaneo(){
     detectorCodigos=new BarcodeDetector({formats:usar.length?usar:formatos.slice(0,3)});
     escaneoActivo=true;
     msg.textContent='Cámara activa · apunta al código del lote';
+    ponerPantallaCompleta(document.getElementById('camaraBox'),video);
     bucleEscaneo();
   }catch(err){
     msg.textContent='No se pudo activar la cámara: '+((err&&err.message)?err.message:'permiso denegado');
     toast('No se pudo activar la cámara. Usa la captura manual.');
   }
 }
+function ponerPantallaCompleta(box,video){
+  try{
+    if(box && box.requestFullscreen) box.requestFullscreen().catch(function(){});
+    else if(video && video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+  }catch(e){}
+}
 function detenerEscaneo(silencioso){
   escaneoActivo=false;
+  try{ if(document.fullscreenElement) document.exitFullscreen().catch(function(){}); }catch(e){}
   if(streamCamara){ streamCamara.getTracks().forEach(t=>t.stop()); streamCamara=null; }
   const video=document.getElementById('camaraVideo');
   if(video){ try{ video.pause(); video.srcObject=null; }catch(e){} }
@@ -339,6 +508,9 @@ function detenerEscaneo(silencioso){
   if(msg) msg.textContent='Cámara apagada';
   if(!silencioso){ const r=document.getElementById('resultadoEscaneo'); if(r){ r.className='msg'; r.textContent=''; } }
 }
+document.addEventListener('fullscreenchange',function(){
+  if(!document.fullscreenElement && escaneoActivo) detenerEscaneo(true);
+});
 async function bucleEscaneo(){
   if(!escaneoActivo||!detectorCodigos) return;
   const video=document.getElementById('camaraVideo');

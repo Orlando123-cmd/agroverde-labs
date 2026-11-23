@@ -57,7 +57,8 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 | Agua y mermas | RF10, CU09 | Registra consumo de agua y mermas por lote |
 | Auditoría | CL06 | Registra cada acción con usuario, fecha y detalle |
 | Asistente virtual | Apoyo a RNF04 | Chat flotante que guía al personal por puesto, responde dudas, busca lotes por código y abre módulos. Usa reglas locales: no necesita internet ni API externa |
-| Escáner de lote | Apoyo a RF01 / RF03 | Lee QR o código de barras con la cámara (`BarcodeDetector`); si no hay soporte, permite captura manual y lleva el código a Consulta, Trazabilidad o Registro de cierre |
+| Escáner de lote | Apoyo a RF01 / RF03 | Al activar la cámara ocupa **pantalla completa** (botón ✕ Salir o tecla Esc). Lee QR o Code128 con `BarcodeDetector`; si no hay soporte, permite captura manual y lleva el código a Consulta, Trazabilidad o Registro de cierre |
+| Código de barras de prueba | Apoyo a RF01 / RF03 | Genera un **Code128-B** real de cualquier lote. Se puede ver, descargar en SVG, imprimir y verificar. El botón «Verificar lectura» usa `BarcodeDetector` si existe y, si no, un decodificador interno que lee la imagen y valida el checksum. También se incluye `codigo_barras_prueba.svg` listo para escanear desde otra pantalla |
 | Alertas del inicio | Apoyo a RF02 / RF11 / RF05 | Avisos de lotes sin validar, pendientes de sincronización, legajos bloqueados, consentimientos por vencer y pedidos con stock insuficiente |
 | Auditoría y respaldos | CL06 / RN10 | Exporta e importa la base en JSON y descarga la bitácora en CSV; permite pasar datos entre dispositivos sin backend |
 | Reportes descargables | RF03 / RF09 | Consulta, trazabilidad y auditoría se descargan en CSV (con BOM para Excel) y se pueden guardar como PDF desde «Imprimir» |
@@ -68,7 +69,8 @@ Para que el celular la instale con ícono propio y la abra como app (pantalla co
 ```
 index.html            Interfaz, login y registro de la PWA
 styles.css            Estilos responsive (móvil primero — RNF03/RNF04)
-app.js                Lógica, persistencia, reglas de negocio y auditoría
+app.js                Lógica, persistencia, reglas de negocio, Code128 y auditoría
+codigo_barras_prueba.svg  Código Code128 de LOTE-2026-001 listo para imprimir/escanear
 manifest.webmanifest  Manifiesto PWA (nombre, íconos, pantalla completa)
 sw.js                 Service worker: caché offline de la app
 icons/                Íconos 192, 512 y apple-touch-icon

@@ -355,8 +355,25 @@ tbody tr:last-child td{border-bottom:0}
   background:rgba(8,32,23,.86);color:#eaf6f0;border:1px solid rgba(255,255,255,.18);
   border-radius:9px;padding:8px 10px;font-size:12px;font-weight:600
 }
+.scanner-salir{
+  position:absolute;top:14px;right:14px;z-index:3;border:1px solid rgba(255,255,255,.35);
+  background:rgba(8,32,23,.88);color:#fff;border-radius:10px;padding:9px 13px;
+  font-size:12.5px;font-weight:700;cursor:pointer;min-height:44px
+}
+.scanner-salir:hover{background:#b3261e;border-color:#b3261e}
+.scanner-box:fullscreen{
+  width:100vw;height:100vh;max-height:none;aspect-ratio:auto;border-radius:0;border:0;background:#000
+}
+.scanner-box:fullscreen video{object-fit:cover}
+.scanner-box:fullscreen .scanner-marca{width:min(70vw,420px)}
+.scanner-box:fullscreen .scanner-overlay{left:50%;right:auto;transform:translateX(-50%);min-width:min(420px,90vw);bottom:26px}
 .acciones-tabla{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
 .acciones-tabla .btn{margin:0}
+.codigo-barras{
+  margin-top:14px;padding:12px;background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);
+  overflow-x:auto;text-align:center;-webkit-overflow-scrolling:touch
+}
+.codigo-barras svg{max-width:none;height:auto;display:inline-block}
 
 /* ---------- Gestión de usuarios y respaldos ---------- */
 .code-list{font-family:"Cascadia Code",Consolas,monospace}
